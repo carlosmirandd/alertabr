@@ -11,7 +11,7 @@ npm run dev       # http://localhost:8788
 npm test
 ```
 
-Precisa só de Node 20+. Python 3 é necessário apenas para refazer a malha (`npm run geo`).
+Precisa só de Node 20+ (passo a passo completo no README, em "Rodar no seu computador"). Python 3 é necessário apenas para refazer a malha (`npm run geo`).
 
 ## O que ajuda
 
