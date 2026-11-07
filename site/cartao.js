@@ -37,16 +37,17 @@
     cx.fillStyle = claro ? "#111" : "#fff"; cx.textBaseline = "middle"; cx.fillText(rot, M + 22, y + 30); y += 96;
 
     if (d.nacional) {
-      const n = d.nacional;
-      y = texto(cx, "Alertas e focos de calor no Brasil", M, y, L, 78, 800, "#fff", 3, 1.12) + 24;
+      const n = d.nacional, P = d.formato !== "stories", BH = P ? 150 : 190; // no post (quadrado) tudo é mais compacto para a lista caber acima do rodapé
+      y = texto(cx, "Alertas e focos de calor no Brasil", M, y, L, P ? 66 : 78, 800, "#fff", 2, 1.12) + (P ? 18 : 24);
       const caixas = [["Grande perigo", n.sev[3], "#F80703"], ["Perigo", n.sev[2], "#FF9900"], ["Potencial", n.sev[1], "#FFD60A"]], bw = (L - 40) / 3;
-      caixas.forEach((c, i) => { const x = M + i * (bw + 20); cx.fillStyle = "rgba(255,255,255,.07)"; cx.beginPath(); cx.roundRect(x, y, bw, 190, 22); cx.fill(); cx.fillStyle = c[2]; cx.fillRect(x, y + 28, 8, 134);
-        cx.fillStyle = "#fff"; cx.font = `800 82px ${FONTE}`; cx.textBaseline = "alphabetic"; cx.fillText(n.fmt(c[1]), x + 30, y + 112); cx.font = `600 26px ${FONTE}`; cx.fillStyle = "#b7c3d0"; cx.fillText(c[0], x + 30, y + 154); });
-      y += 190 + 36; cx.font = `600 32px ${FONTE}`; cx.fillStyle = "#b7c3d0"; cx.fillText("municípios com aviso do INMET hoje", M, y); y += 44;
-      cx.font = `800 96px ${FONTE}`; cx.fillStyle = "#FF7A1A"; cx.fillText(n.fmt(n.focos), M, y + 80); y += 120;
-      cx.font = `600 32px ${FONTE}`; cx.fillStyle = "#b7c3d0"; cx.fillText("focos de calor detectados por satélite em 24 h", M, y); y += 56;
-      if (n.top.length) { cx.font = `800 30px ${FONTE}`; cx.fillStyle = "#fff"; cx.fillText("Mais focos agora", M, y + 30); y += 56;
-        n.top.slice(0, d.formato === "stories" ? 7 : 4).forEach((t) => { cx.font = `600 34px ${FONTE}`; cx.fillStyle = "#e8eef4"; cx.fillText(t.nome + " · " + t.uf, M, y + 34); cx.textAlign = "right"; cx.fillStyle = "#FF7A1A"; cx.font = `800 34px ${FONTE}`; cx.fillText(n.fmt(t.n), W - M, y + 34); cx.textAlign = "left"; y += 56; }); }
+      caixas.forEach((c, i) => { const x = M + i * (bw + 20); cx.fillStyle = "rgba(255,255,255,.07)"; cx.beginPath(); cx.roundRect(x, y, bw, BH, 22); cx.fill(); cx.fillStyle = c[2]; cx.fillRect(x, y + 24, 8, BH - 48);
+        cx.fillStyle = "#fff"; cx.font = `800 ${P ? 68 : 82}px ${FONTE}`; cx.textBaseline = "alphabetic"; cx.fillText(n.fmt(c[1]), x + 30, y + (P ? 88 : 112)); cx.font = `600 26px ${FONTE}`; cx.fillStyle = "#b7c3d0"; cx.fillText(c[0], x + 30, y + BH - (P ? 30 : 36)); });
+      y += BH + (P ? 30 : 36); cx.font = `600 32px ${FONTE}`; cx.fillStyle = "#b7c3d0"; cx.fillText("municípios com aviso do INMET hoje", M, y); y += P ? 34 : 44;
+      cx.font = `800 ${P ? 76 : 96}px ${FONTE}`; cx.fillStyle = "#FF7A1A"; cx.fillText(n.fmt(n.focos), M, y + (P ? 64 : 80)); y += P ? 96 : 120;
+      cx.font = `600 32px ${FONTE}`; cx.fillStyle = "#b7c3d0"; cx.fillText("focos de calor detectados por satélite em 24 h", M, y); y += P ? 44 : 56;
+      const cabem = Math.floor((H - 166 - y - 56) / 56); // linhas que cabem acima do rodapé
+      if (n.top.length && cabem >= 1) { cx.font = `800 30px ${FONTE}`; cx.fillStyle = "#fff"; cx.fillText("Mais focos agora", M, y + 30); y += 56;
+        n.top.slice(0, Math.min(cabem, d.formato === "stories" ? 7 : 4)).forEach((t) => { cx.font = `600 34px ${FONTE}`; cx.fillStyle = "#e8eef4"; cx.fillText(t.nome + " · " + t.uf, M, y + 34); cx.textAlign = "right"; cx.fillStyle = "#FF7A1A"; cx.font = `800 34px ${FONTE}`; cx.fillText(n.fmt(t.n), W - M, y + 34); cx.textAlign = "left"; y += 56; }); }
     } else {
       const forT = d.forma ? (d.formato === "stories" ? 520 : 300) : 0;
       if (d.alerta) y = texto(cx, d.alerta.t, M, y, L - (forT ? forT * 0.6 : 0), 54, 700, cor, 2) + 6;
