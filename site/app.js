@@ -40,10 +40,11 @@
   async function init() {
     try { [G, E] = await Promise.all([json("data/municipios.json", 30000), json("data/estados.json", 30000)]); }
     catch (e) { $("#carrega").textContent = "Não foi possível carregar o mapa. Recarregue a página."; return; }
-    mapa = new window.MapaBrasil($("#mapa"), G, E, { cor: corDe, aoClicar: aoClicar, aoPassar: aoPassar, insets: insets });
-    mapa.prio = new Set([...CAPITAIS].map((c) => G.c.indexOf(c)).filter((k) => k >= 0));
-    $("#carrega").classList.add("ok"); legenda(); pintaAgora(); ligaUI();
-    const h = /#m=(\d{7})/.exec(location.hash); await atualiza(true); mapa.refit();
+    const GL = !!(window.MapaGL && window.MapaGL.suportado()), Mapa = GL ? window.MapaGL : window.MapaBrasil;
+    mapa = new Mapa($("#mapa"), G, E, { cor: corDe, aoClicar: aoClicar, aoPassar: aoPassar, insets: insets, capitais: CAPITAIS, aoPronto: () => $("#carrega").classList.add("ok") });
+    if (!GL) { mapa.prio = new Set([...CAPITAIS].map((c) => G.c.indexOf(c)).filter((k) => k >= 0)); $("#carrega").classList.add("ok"); }
+    legenda(); pintaAgora(); ligaUI();
+    const h = /#m=(\d{7})/.exec(location.hash); if (/[?&]camada=focos/.test(location.search)) setCamada("focos"); await atualiza(true); mapa.refit();
     if (h) { const i = G.c.indexOf(+h[1]); if (i >= 0) seleciona(i); }
     ciclo();
   }
@@ -70,11 +71,12 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden && D && Date.now() - D.gerado > CFG.INTERVALO) atualiza(); });
   function montaMembros() { membros = D.alertas.map(() => new Set()); for (const i in D.m) for (const p of D.m[i]) membros[p] && membros[p].add(+i); }
   function status(forca) {
-    const el = $("#status"), t = $("#stTxt"); el.classList.remove("velho", "erro");
-    if (!D) { el.classList.add("erro"); t.textContent = "sem dados"; return; }
+    const els = [$("#status"), $("#vivo")], t = $("#vivoTxt"); els.forEach((e) => e.classList.remove("velho", "erro"));
+    if (!D) { els.forEach((e) => e.classList.add("erro")); t.textContent = "sem dados"; return; }
     const idade = Date.now() - D.gerado, fora = ["inmet", "inpe"].filter((k) => D.fontes[k] && !D.fontes[k].ok);
-    if (forca === "erro" || idade > CFG.VELHO) el.classList.add("velho");
-    t.textContent = "Ao vivo · atualizado " + ha(D.gerado) + (fora.length ? " · " + fora.map((x) => x.toUpperCase()).join(", ") + " fora do ar" : "") + (idade > CFG.VELHO ? " · dados antigos" : "");
+    if (forca === "erro" || idade > CFG.VELHO) els.forEach((e) => e.classList.add("velho"));
+    const txt = (idade > CFG.VELHO ? "Dados de " : "Ao vivo · ") + ha(D.gerado) + (fora.length ? " · " + fora.map((x) => x.toUpperCase()).join(", ") + " fora do ar" : "");
+    t.textContent = txt; $("#stTxt").textContent = txt; $("#status").title = txt;
   }
   setInterval(() => { if (D && !document.hidden) status(); }, 30000);
 
@@ -187,10 +189,11 @@
       ${o.pils.length ? `<div class="pils" role="group" aria-label="Avisos">${o.pils.map((p) => `<button type="button" class="pil${p.on ? " on" : ""}" data-pil="${p.pos}" aria-pressed="${p.on}"><svg class="ic"><use href="#i-${ICONE[tipoCeu(p.a)]}"/></svg><em>${esc(p.a.t)}</em><b>${esc(p.txt)}</b></button>`).join("")}</div>` : ""}
     </section>`;
   }
+  const RODAPE = '<footer class="rodape">Dados: <a href="https://alertas2.inmet.gov.br/" target="_blank" rel="noopener">INMET</a> · <a href="https://terrabrasilis.dpi.inpe.br/queimadas/portal/" target="_blank" rel="noopener">INPE Queimadas</a> · malhas <a href="https://www.ibge.gov.br/" target="_blank" rel="noopener">IBGE</a> · notícias Google Notícias. Em emergência ligue <b>199</b> ou <b>193</b>.</footer>';
   const horaTxt = () => new Date(D.gerado).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   function pintaAgora() {
     const el = $("#aba-agora"); if (!D) { el.innerHTML = '<p class="vazio esq">Buscando os dados mais recentes…</p>'; return; }
-    el.innerHTML = sel >= 0 ? municipio(sel) : brasil();
+    el.innerHTML = (sel >= 0 ? municipio(sel) : brasil()) + RODAPE;
     requestAnimationFrame(cabeLista);
   }
   // a lista nunca rola: mostra as linhas que cabem e resume o resto
@@ -243,7 +246,7 @@
 
   // ---------- cartão da direita: notícias ----------
   const TEMAS = { todos: '(chuva OR alagamento OR queimada OR incêndio OR "Defesa Civil" OR temporal OR seca)', chuva: "(chuva OR alagamento OR enchente OR temporal OR deslizamento)", fogo: '(queimada OR incêndio OR "foco de calor" OR fumaça)', calor: '("onda de calor" OR seca OR "baixa umidade" OR calor)' };
-  const cacheN = new Map(), tabletCards = () => matchMedia("(min-width:600px) and (max-width:999px) and (min-height:560px)").matches, secundariaVisivel = () => desk() || $("#painel").classList.contains("alto"), noticiasVisivel = () => secundariaVisivel() || tabletCards();
+  const cacheN = new Map(), tabletCards = () => matchMedia("(min-width:600px) and (max-width:999px) and (min-height:800px)").matches, secundariaVisivel = () => desk() || $("#painel").classList.contains("alto"), noticiasVisivel = () => secundariaVisivel() || tabletCards();
   function pintaNoticias() {
     if (!noticiasVisivel()) { sujo.n = true; return; } sujo.n = false;
     const el = $("#aba-noticias"), local = sel >= 0;
@@ -345,6 +348,10 @@
     });
     ul.addEventListener("mousedown", (e) => { const li = e.target.closest("li"); if (li) { e.preventDefault(); seleciona(+li.dataset.i); fim(); inp.blur(); } });
     inp.addEventListener("blur", () => setTimeout(fim, 150));
+  }
+  if ("serviceWorker" in navigator) {
+    if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+    else addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => { /* sem service worker: o site funciona igual, só não instala offline */ }));
   }
   window.alertabr = { get mapa() { return mapa; } }; // gancho para depuração/medição
   init();

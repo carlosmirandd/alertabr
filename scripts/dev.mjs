@@ -5,7 +5,7 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const RAIZ = fileURLToPath(new URL("../site/", import.meta.url)), FUNCOES = fileURLToPath(new URL("../functions/api/", import.meta.url)), PORTA = +process.argv[2] || 8788;
-const TIPOS = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png" };
+const TIPOS = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".webmanifest": "application/manifest+json", ".pbf": "application/x-protobuf" };
 createServer(async (req, res) => {
   const u = new URL(req.url, "http://x");
   try {

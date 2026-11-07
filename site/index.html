@@ -8,8 +8,15 @@
 <meta name="theme-color" content="#100e0c" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#e9e5dc" media="(prefers-color-scheme: light)">
 <meta name="color-scheme" content="light dark">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314110f'/%3E%3Cpath d='M16 5 28 26H4z' fill='%23f5a524'/%3E%3Crect x='14.6' y='13' width='2.8' height='7' rx='1.4' fill='%2314110f'/%3E%3Ccircle cx='16' cy='23' r='1.6' fill='%2314110f'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="alertabr">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>try { var t = localStorage.getItem("alertabr-tema"); if (t === "claro" || t === "escuro") document.documentElement.dataset.tema = t; } catch (e) {}</script>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -32,14 +39,12 @@
 </svg>
 
 <div class="app" id="app">
-  <main class="corpo" id="corpo">
-    <section class="mapa" id="mapa" aria-label="Mapa do Brasil por município">
-      <div class="leg" id="leg"></div>
-      <div class="zoom"><button id="zMais" aria-label="Aproximar">+</button><button id="zMenos" aria-label="Afastar">−</button><button id="zBr" aria-label="Ver o Brasil todo"><svg class="ic" aria-hidden="true"><use href="#i-pino"/></svg></button></div>
-      <div class="tip" id="tip" hidden></div>
-      <div class="carrega" id="carrega">Carregando o mapa…</div>
-    </section>
+  <div class="mapa" id="mapa" role="application" aria-label="Mapa do Brasil por município">
+    <div class="tip" id="tip" hidden></div>
+    <div class="carrega" id="carrega">Carregando o mapa…</div>
+  </div>
 
+  <main class="corpo" id="corpo">
     <header class="barra gl" id="barra">
       <div class="marca-c"><svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M16 4 29 27H3z" fill="#f5a524"/><rect x="14.6" y="12" width="2.8" height="8" rx="1.4" fill="#14110f"/><circle cx="16" cy="23.4" r="1.7" fill="#14110f"/></svg><b>alertabr</b></div>
       <div class="camadas" role="tablist" aria-label="Camada do mapa">
@@ -53,12 +58,12 @@
         <ul id="sug" class="sug" role="listbox" hidden></ul>
       </div>
       <button type="button" class="icone" id="buscaIc" aria-label="Buscar município"><svg class="ic" aria-hidden="true"><use href="#i-busca"/></svg></button>
-      <div class="status" id="status" aria-live="polite"><i class="dot"></i><span id="stTxt">carregando…</span></div>
+      <div class="status" id="status" aria-live="polite" title="Estado da conexão com os dados"><i class="dot"></i><span id="stTxt">carregando…</span></div>
       <button type="button" class="icone" id="tema" aria-label="Alternar entre tema claro e escuro"><svg class="ic" id="temaIc"><use href="#i-lua"/></svg></button>
     </header>
 
     <section class="resumo gl" id="resumo" aria-live="polite">
-      <div class="r-tit"><h1 id="hTitulo">Brasil agora</h1><p id="hSub">Buscando os dados mais recentes…</p></div>
+      <div class="r-tit"><div><h1 id="hTitulo">Brasil agora</h1><p id="hSub">Buscando os dados mais recentes…</p></div><span class="r-vivo" id="vivo"><i class="dot"></i><span id="vivoTxt">carregando…</span></span></div>
       <div class="r-stats" id="filtros" role="group" aria-label="Filtrar por gravidade ou ver focos de calor">
         <button type="button" class="st s3" data-sev="3" aria-pressed="false"><span><i></i>Grande<em> perigo</em></span><b id="n3">–</b></button>
         <button type="button" class="st s2" data-sev="2" aria-pressed="false"><span><i></i>Perigo</span><b id="n2">–</b></button>
@@ -68,17 +73,21 @@
       <div class="barra-p" aria-hidden="true"><i class="b3" id="bb3"></i><i class="b2" id="bb2"></i><i class="b1" id="bb1"></i></div>
     </section>
 
+    <div class="leg" id="leg"></div>
+    <div class="zoom"><button id="zMais" aria-label="Aproximar">+</button><button id="zMenos" aria-label="Afastar">−</button><button id="zBr" aria-label="Ver o Brasil todo"><svg class="ic" aria-hidden="true"><use href="#i-pino"/></svg></button></div>
+
     <aside class="painel" id="painel">
       <button type="button" class="grip" id="grip" aria-label="Ver tudo ou recolher os cartões"><svg class="ic" aria-hidden="true"><use href="#i-cima"/></svg><span id="gripTxt">Ver tudo</span></button>
       <div class="aba" id="aba-agora"></div>
       <div class="aba gl" id="aba-noticias"></div>
       <div class="aba gl" id="aba-cartao"></div>
-      <footer class="rodape">Dados: <a href="https://alertas2.inmet.gov.br/" target="_blank" rel="noopener">INMET</a> · <a href="https://terrabrasilis.dpi.inpe.br/queimadas/portal/" target="_blank" rel="noopener">INPE Queimadas</a> · malhas <a href="https://www.ibge.gov.br/" target="_blank" rel="noopener">IBGE</a> · notícias Google Notícias · em emergência ligue <b>199</b> ou <b>193</b></footer>
     </aside>
   </main>
 </div>
+<script src="vendor/maplibre-gl.js"></script>
 <script src="config.js"></script>
 <script src="mapa.js"></script>
+<script src="mapa-gl.js"></script>
 <script src="cartao.js"></script>
 <script src="app.js"></script>
 </body>

@@ -170,7 +170,7 @@ for idx, (ext, todos) in enumerate(poligonos):
 linhas = "".join(caminho(g, False) for g in (grade(p) for p in arcos_borda.values()) if len(g) >= 2)
 
 os.makedirs(OUT, exist_ok=True)
-json.dump({"vb": f"0 0 1000 {H}", "lab": lab, "linhas": linhas}, open(os.path.join(OUT, "estados.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+json.dump({"vb": f"0 0 1000 {H}", "lab": lab, "linhas": linhas, "proj": [K, minx, miny, S]}, open(os.path.join(OUT, "estados.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 json.dump({"c": C, "n": N, "d": D}, open(os.path.join(OUT, "municipios.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 compartilhadas = sum(1 for s in dono.values() if len(s) > 1); total = len(dono)
 print(f"\nok: {len(C)} municipios | arcos {len(cache_arco)} (borda: {len(arcos_borda)}) | arestas compartilhadas {compartilhadas}/{total} ({100 * compartilhadas // total}%)")
