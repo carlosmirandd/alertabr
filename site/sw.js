@@ -1,8 +1,9 @@
 /* Service worker do alertabr (PWA): abre rápido e funciona sem internet com o último dado salvo.
-   - arquivos do site e geometria: cache primeiro, atualiza em segundo plano (stale-while-revalidate)
+   - JS/CSS/HTML do site: rede primeiro (2,5 s) e cópia se offline
+   - geometria, fontes e vendor: cache primeiro, atualiza em segundo plano (stale-while-revalidate)
    - estado.json (dados ao vivo, no R2 ou local): rede primeiro; sem rede, usa a última cópia
    - /api/*: sempre rede (notícias). Para forçar atualização geral, troque o número em VERSAO. */
-const VERSAO = "alertabr-v2";
+const VERSAO = "alertabr-v3";
 const BASICOS = ["./", "index.html", "style.css", "app.js", "mapa.js", "mapa-gl.js", "cartao.js", "config.js", "ads.js", "sobre.html", "privacidade.html", "pagina.css", "data/noticias.json", "vendor/maplibre-gl.js", "vendor/maplibre-gl.css",
   "data/municipios.json", "data/estados.json", "data/estado.json", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/favicon.svg",
   "fonts/Open Sans Semibold/0-255.pbf", "fonts/Open Sans Semibold/256-511.pbf"];
@@ -27,5 +28,6 @@ self.addEventListener("fetch", (e) => {
   if (/\/(estado|noticias)\.json$/.test(u.pathname)) { e.respondWith(redePrimeiro(req, 8000)); return; }
   if (u.origin !== location.origin) return;
   if (req.mode === "navigate") { e.respondWith(redePrimeiro(req, 3500).catch(() => caches.match("index.html"))); return; }
+  if (/\.(js|css|html)$/.test(u.pathname) && !u.pathname.startsWith("/vendor/")) { e.respondWith(redePrimeiro(req, 2500)); return; } // código do site: rede primeiro (atualização aparece no 1º recarregamento); sem rede usa a cópia
   e.respondWith(cacheEAtualiza(req));
 });
