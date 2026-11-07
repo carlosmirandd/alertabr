@@ -299,11 +299,11 @@
       const ap = local ? a.filter((n) => norm(n.t).includes(norm(nome))) : a;
       let lista = semRepetidos(local ? [...f.principal, ...ap] : [...f.principal, ...a].sort((x, y) => (y.nv || 0) - (x.nv || 0) || y.d - x.d));
       let aviso = "";
-      if (lista.length < 3 && local && f.extra.length) { aviso = `<p class="vazio esq">Pouca coisa sobre ${esc(nome)}. Mais notícias em ${esc(sigla)}:</p>`; lista = semRepetidos([...lista, ...f.extra]); }
+      if (local && lista.length < 3) aviso = `<p class="vazio esq">${lista.length ? "Poucas notícias" : "Nenhuma notícia recente"} sobre ${esc(nome)}.</p><button type="button" class="btn sec" style="margin:4px" data-uf="${codUf(sel)}">Ver notícias de ${esc(NOME_UF[codUf(sel)])}</button>`; // sem misturar com outras cidades
       lista = lista.slice(0, desk() ? 15 : 7);
       if ((feed === undefined || api === undefined) && !lista.length) return; // espera o outro lado antes de dizer que não há nada
       const falhou = feed === null && (api === null || (api && api.erro));
-      L.innerHTML = lista.length ? aviso + lista.map(item).join("") : `<p class="vazio">Nenhuma notícia recente sobre o assunto${falhou ? " (fontes indisponíveis agora)" : ""}.</p><a class="btn sec" style="display:inline-flex;align-items:center;margin:4px" href="https://news.google.com/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener noreferrer">Buscar no Google Notícias</a>`;
+      L.innerHTML = lista.length ? lista.map(item).join("") + aviso : (local && aviso) ? aviso : `<p class="vazio">Nenhuma notícia recente sobre o assunto${falhou ? " (fontes indisponíveis agora)" : ""}.</p><a class="btn sec" style="display:inline-flex;align-items:center;margin:4px" href="https://news.google.com/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener noreferrer">Buscar no Google Notícias</a>`;
       cabeNoticias();
     };
     carregaFeed().then((j) => { feed = j; desenha(); });
