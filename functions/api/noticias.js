@@ -2,7 +2,7 @@
 // GET /api/noticias?q=<busca>&dias=3   -> { itens: [{ t, u, f, d, n }] }   (cache de 10 min na borda)
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 const TEMAS = "(chuva OR alagamento OR enchente OR temporal OR queimada OR incêndio OR \"alerta\" OR \"Defesa Civil\" OR deslizamento OR seca OR \"onda de calor\")";
-const dec = (s) => s.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&(amp|lt|gt|quot|#39|apos);/g, (m, e) => ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", apos: "'" }[e])).trim();
+const dec = (s) => s.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (m, n) => String.fromCodePoint(+n)).replace(/&(amp|lt|gt|quot|#39|apos);/g, (m, e) => ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", apos: "'" }[e])).trim();
 const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const tokens = (t) => new Set(norm(t).split(/[^a-z0-9]+/).filter((w) => w.length > 3));
 const jac = (a, b) => { let i = 0; for (const x of a) if (b.has(x)) i++; return i / (a.size + b.size - i || 1); };
