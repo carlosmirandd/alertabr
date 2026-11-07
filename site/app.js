@@ -38,7 +38,7 @@
         fonteOk = (fonteOk + k) % urls.length;
         // um arquivo local mais velho que o que já temos não substitui os dados
         if (D && j.gerado <= D.gerado) { status(); return; }
-        D = j; semDados = false; montaMembros(); mapa.setCor(corDe); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null); legenda(); pintaPlacar(); pintaAgora(); if (aba === "cartao") pintaCartao(); status(); return;
+        D = j; semDados = false; montaMembros(); mapa.setCor(corDe, true); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null); legenda(); pintaPlacar(); pintaAgora(); if (aba === "cartao") pintaCartao(); status(); return;
       } catch (e) { /* tenta a próxima fonte */ }
     }
     if (primeira || semDados) status("erro");
@@ -178,7 +178,7 @@
     $("#painel").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.dataset.alerta != null) { e.preventDefault(); e.target.click(); } });
     busca();
   }
-  function setCamada(c) { if (camada === c) return; camada = c; $("#c-alertas").setAttribute("aria-selected", c === "alertas"); $("#c-focos").setAttribute("aria-selected", c === "focos"); legenda(); mapa.setCor(corDe); }
+  function setCamada(c) { if (camada === c) return; camada = c; $("#c-alertas").setAttribute("aria-selected", c === "alertas"); $("#c-focos").setAttribute("aria-selected", c === "focos"); legenda(); mapa.setCor(corDe, true); }
 
   // ---------- busca ----------
   function busca() {
