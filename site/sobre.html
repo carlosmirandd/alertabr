@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sobre o alertabr</title>
+<meta name="description" content="O alertabr mostra num mapa os avisos meteorológicos do INMET, os focos de calor do INPE e notícias de risco de todos os 5.570 municípios do Brasil.">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="pagina.css">
+</head>
+<body>
+<main>
+<header><a class="voltar" href="./">← Voltar ao mapa</a></header>
+<h1>Sobre o alertabr</h1>
+<p class="meta">Mapa ao vivo de avisos de tempo severo, queimadas e outros riscos naturais, município por município.</p>
+
+<p>O alertabr junta num só lugar informações que já são públicas, mas ficam espalhadas: os <b>avisos meteorológicos do INMET</b> (chuva forte, tempestade, onda de calor, baixa umidade, vendaval...), os <b>focos de calor detectados por satélite pelo INPE</b>, <b>alertas globais de terremotos, ciclones e enchentes</b> que atingem o Brasil e as <b>notícias</b> de veículos e órgãos oficiais sobre esses assuntos. Você escolhe o seu município (ou toca no mapa) e vê o que está valendo hoje, o que vem pela frente e o que a imprensa local está noticiando.</p>
+
+<h2>Como os dados chegam</h2>
+<p>Um programa automático (o <i>relay</i>) consulta as fontes a cada poucos minutos, monta um arquivo único e o publica. O site lê esse arquivo, então a página abre rápido e funciona mesmo em conexões lentas. Se uma fonte sair do ar, o site continua mostrando o último dado bom dela e avisa que a fonte está fora. O código é aberto (licença MIT) e está em <a href="https://github.com/carlosmirandd/alertabr" rel="noopener">github.com/carlosmirandd/alertabr</a>.</p>
+
+<h2>Fontes</h2>
+<table>
+<tr><th>O quê</th><th>Fonte</th></tr>
+<tr><td>Avisos meteorológicos</td><td><a href="https://alertas2.inmet.gov.br/" rel="noopener">INMET</a></td></tr>
+<tr><td>Focos de calor</td><td><a href="https://terrabrasilis.dpi.inpe.br/queimadas/portal/" rel="noopener">INPE – Programa Queimadas</a></td></tr>
+<tr><td>Limites dos municípios</td><td><a href="https://www.ibge.gov.br/" rel="noopener">IBGE</a> (malhas simplificadas para carregar rápido)</td></tr>
+<tr><td>Terremotos, ciclones, enchentes e incêndios de grande porte</td><td><a href="https://www.gdacs.org/" rel="noopener">GDACS</a> (ONU/União Europeia) e <a href="https://earthquake.usgs.gov/" rel="noopener">USGS</a></td></tr>
+<tr><td>Notícias</td><td>Agência Brasil, Cemaden, Ministério da Integração, INPE, g1, MetSul, ((o))eco, CNN Brasil, Folha e buscas do Google Notícias e do Bing Notícias. Mostramos só o título, o nome do veículo e o link; a matéria completa fica no site de origem.</td></tr>
+</table>
+
+<h2>Limites importantes</h2>
+<div class="caixa"><p style="margin:0">O alertabr <b>não substitui</b> os canais oficiais. Os dados podem atrasar ou falhar, e o mapa é uma simplificação. Em caso de emergência ligue <b>199</b> (Defesa Civil) ou <b>193</b> (Bombeiros) e siga as orientações das autoridades locais. As notícias são de responsabilidade dos veículos que as publicam.</p></div>
+
+<h2>Publicidade</h2>
+<p>O alertabr é gratuito. Para cobrir os custos, o site pode exibir anúncios do Google em uma faixa separada na parte de baixo da tela, sem cobrir o mapa nem os botões. Os anúncios não influenciam o que aparece nos alertas. Veja a <a href="privacidade.html">política de privacidade</a>.</p>
+
+<h2>Correções e contato</h2>
+<p>Achou um erro, um município no lugar errado ou uma notícia fora do assunto? Abra um chamado em <a href="https://github.com/carlosmirandd/alertabr/issues" rel="noopener">github.com/carlosmirandd/alertabr/issues</a>.</p>
+</main>
+</body>
+</html>

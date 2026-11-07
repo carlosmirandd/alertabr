@@ -1,0 +1,12 @@
+/* Páginas de texto (Sobre, Privacidade). Segue o tema do aparelho. */
+:root { --bg: #f5f2ec; --s0: #fff; --on: #1d1b18; --on2: #4a463f; --on3: #6f6a60; --line: #e2ddd2; --acc: #b3261e; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --bg: #14110f; --s0: #1b1815; --on: #f1ede6; --on2: #cfc9bd; --on3: #9d968a; --line: #2f2a24; --acc: #ff8a80; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--on); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; }
+main { max-width: 720px; margin: 0 auto; padding: 24px 16px 56px; }
+header a.voltar { display: inline-flex; align-items: center; min-height: 44px; color: var(--on2); text-decoration: none; font-weight: 600; font-size: 14px; }
+h1 { font-size: 28px; line-height: 1.2; margin: 8px 0 4px; } h2 { font-size: 19px; margin: 32px 0 6px; } p, li { color: var(--on2); } ul { padding-left: 20px; }
+.meta { color: var(--on3); font-size: 13px; margin: 0 0 16px; }
+a { color: var(--acc); } .caixa { background: var(--s0); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin: 16px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--s0); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; } th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; } th { color: var(--on3); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+button.acao { font: inherit; font-weight: 600; min-height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--on); color: var(--bg); cursor: pointer; }

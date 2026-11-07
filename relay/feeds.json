@@ -1,0 +1,254 @@
+{
+ "_aviso": "Cada fonte tem seus próprios termos de uso. Preencha 'licenca' (texto/endereço dos termos) e desative ('ativo': false) o que não puder usar comercialmente. Itens mostram só título + link + nome da fonte.",
+ "feeds": [
+  {
+   "id": "agenciabrasil",
+   "nome": "Agência Brasil",
+   "url": "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml",
+   "oficial": true,
+   "licenca": ""
+  },
+  {
+   "id": "agenciabrasil-geral",
+   "nome": "Agência Brasil",
+   "url": "https://agenciabrasil.ebc.com.br/rss/geral/feed.xml",
+   "oficial": true,
+   "licenca": ""
+  },
+  {
+   "id": "cemaden",
+   "nome": "Cemaden",
+   "url": "https://www.gov.br/cemaden/pt-br/assuntos/noticias-cemaden/RSS",
+   "oficial": true,
+   "semFiltro": true,
+   "licenca": ""
+  },
+  {
+   "id": "mdr",
+   "nome": "Min. da Integração (Defesa Civil)",
+   "url": "https://www.gov.br/mdr/pt-br/RSS",
+   "oficial": true,
+   "licenca": ""
+  },
+  {
+   "id": "inpe",
+   "nome": "INPE",
+   "url": "https://www.gov.br/inpe/pt-br/RSS",
+   "oficial": true,
+   "licenca": ""
+  },
+  {
+   "id": "metsul",
+   "nome": "MetSul",
+   "url": "https://www.metsul.com/feed/",
+   "licenca": ""
+  },
+  {
+   "id": "oeco",
+   "nome": "((o))eco",
+   "url": "https://oeco.org.br/feed/",
+   "licenca": ""
+  },
+  {
+   "id": "cnnbrasil",
+   "nome": "CNN Brasil",
+   "url": "https://www.cnnbrasil.com.br/feed/",
+   "licenca": ""
+  },
+  {
+   "id": "folha-cotidiano",
+   "nome": "Folha",
+   "url": "https://feeds.folha.uol.com.br/cotidiano/rss091.xml",
+   "licenca": ""
+  },
+  {
+   "id": "g1-ac",
+   "nome": "g1 AC",
+   "url": "https://g1.globo.com/rss/g1/ac/",
+   "uf": 12,
+   "licenca": ""
+  },
+  {
+   "id": "g1-al",
+   "nome": "g1 AL",
+   "url": "https://g1.globo.com/rss/g1/al/",
+   "uf": 27,
+   "licenca": ""
+  },
+  {
+   "id": "g1-am",
+   "nome": "g1 AM",
+   "url": "https://g1.globo.com/rss/g1/am/",
+   "uf": 13,
+   "licenca": ""
+  },
+  {
+   "id": "g1-ap",
+   "nome": "g1 AP",
+   "url": "https://g1.globo.com/rss/g1/ap/",
+   "uf": 16,
+   "licenca": ""
+  },
+  {
+   "id": "g1-ba",
+   "nome": "g1 BA",
+   "url": "https://g1.globo.com/rss/g1/ba/",
+   "uf": 29,
+   "licenca": ""
+  },
+  {
+   "id": "g1-ce",
+   "nome": "g1 CE",
+   "url": "https://g1.globo.com/rss/g1/ce/",
+   "uf": 23,
+   "licenca": ""
+  },
+  {
+   "id": "g1-df",
+   "nome": "g1 DF",
+   "url": "https://g1.globo.com/rss/g1/df/",
+   "uf": 53,
+   "licenca": ""
+  },
+  {
+   "id": "g1-es",
+   "nome": "g1 ES",
+   "url": "https://g1.globo.com/rss/g1/es/",
+   "uf": 32,
+   "licenca": ""
+  },
+  {
+   "id": "g1-go",
+   "nome": "g1 GO",
+   "url": "https://g1.globo.com/rss/g1/go/",
+   "uf": 52,
+   "licenca": ""
+  },
+  {
+   "id": "g1-ma",
+   "nome": "g1 MA",
+   "url": "https://g1.globo.com/rss/g1/ma/",
+   "uf": 21,
+   "licenca": ""
+  },
+  {
+   "id": "g1-mg",
+   "nome": "g1 MG",
+   "url": "https://g1.globo.com/rss/g1/mg/",
+   "uf": 31,
+   "licenca": ""
+  },
+  {
+   "id": "g1-ms",
+   "nome": "g1 MS",
+   "url": "https://g1.globo.com/rss/g1/ms/",
+   "uf": 50,
+   "licenca": ""
+  },
+  {
+   "id": "g1-mt",
+   "nome": "g1 MT",
+   "url": "https://g1.globo.com/rss/g1/mt/",
+   "uf": 51,
+   "licenca": ""
+  },
+  {
+   "id": "g1-pa",
+   "nome": "g1 PA",
+   "url": "https://g1.globo.com/rss/g1/pa/",
+   "uf": 15,
+   "licenca": ""
+  },
+  {
+   "id": "g1-pb",
+   "nome": "g1 PB",
+   "url": "https://g1.globo.com/rss/g1/pb/",
+   "uf": 25,
+   "licenca": ""
+  },
+  {
+   "id": "g1-pe",
+   "nome": "g1 PE",
+   "url": "https://g1.globo.com/rss/g1/pe/",
+   "uf": 26,
+   "licenca": ""
+  },
+  {
+   "id": "g1-pi",
+   "nome": "g1 PI",
+   "url": "https://g1.globo.com/rss/g1/pi/",
+   "uf": 22,
+   "licenca": ""
+  },
+  {
+   "id": "g1-pr",
+   "nome": "g1 PR",
+   "url": "https://g1.globo.com/rss/g1/pr/",
+   "uf": 41,
+   "licenca": ""
+  },
+  {
+   "id": "g1-rj",
+   "nome": "g1 RJ",
+   "url": "https://g1.globo.com/rss/g1/rj/",
+   "uf": 33,
+   "licenca": ""
+  },
+  {
+   "id": "g1-rn",
+   "nome": "g1 RN",
+   "url": "https://g1.globo.com/rss/g1/rn/",
+   "uf": 24,
+   "licenca": ""
+  },
+  {
+   "id": "g1-ro",
+   "nome": "g1 RO",
+   "url": "https://g1.globo.com/rss/g1/ro/",
+   "uf": 11,
+   "licenca": ""
+  },
+  {
+   "id": "g1-rr",
+   "nome": "g1 RR",
+   "url": "https://g1.globo.com/rss/g1/rr/",
+   "uf": 14,
+   "licenca": ""
+  },
+  {
+   "id": "g1-rs",
+   "nome": "g1 RS",
+   "url": "https://g1.globo.com/rss/g1/rs/",
+   "uf": 43,
+   "licenca": ""
+  },
+  {
+   "id": "g1-sc",
+   "nome": "g1 SC",
+   "url": "https://g1.globo.com/rss/g1/sc/",
+   "uf": 42,
+   "licenca": ""
+  },
+  {
+   "id": "g1-se",
+   "nome": "g1 SE",
+   "url": "https://g1.globo.com/rss/g1/se/",
+   "uf": 28,
+   "licenca": ""
+  },
+  {
+   "id": "g1-sp",
+   "nome": "g1 SP",
+   "url": "https://g1.globo.com/rss/g1/sp/",
+   "uf": 35,
+   "licenca": ""
+  },
+  {
+   "id": "g1-to",
+   "nome": "g1 TO",
+   "url": "https://g1.globo.com/rss/g1/to/",
+   "uf": 17,
+   "licenca": ""
+  }
+ ]
+}

@@ -1,7 +1,8 @@
 // Radar de notícias: busca no Google Notícias (RSS), junta títulos parecidos e devolve poucos itens.
 // GET /api/noticias?q=<busca>&dias=3   -> { itens: [{ t, u, f, d, n }] }   (cache de 10 min na borda)
+import { relevante } from "../../shared/relevancia.mjs";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
-const TEMAS = "(chuva OR alagamento OR enchente OR temporal OR queimada OR incêndio OR \"alerta\" OR \"Defesa Civil\" OR deslizamento OR seca OR \"onda de calor\")";
+const TEMAS = "(chuva OR terremoto OR alagamento OR enchente OR temporal OR queimada OR incêndio OR \"alerta\" OR \"Defesa Civil\" OR deslizamento OR seca OR \"onda de calor\")";
 const dec = (s) => s.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (m, n) => String.fromCodePoint(+n)).replace(/&(amp|lt|gt|quot|#39|apos);/g, (m, e) => ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", apos: "'" }[e])).trim();
 const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const tokens = (t) => new Set(norm(t).split(/[^a-z0-9]+/).filter((w) => w.length > 3));
@@ -46,7 +47,7 @@ export async function onRequestGet({ request }) {
   for (const [nome, busca] of fontes) {
     try {
       const r = await busca(); if (!r.ok) throw new Error(nome + " " + r.status);
-      const itens = agrupa(parse(await r.text())); if (!itens.length) throw new Error(nome + " sem itens");
+      const itens = agrupa(parse(await r.text()).filter((n) => relevante(n.t))); if (!itens.length) throw new Error(nome + " sem itens"); // o buscador traz coisa fora do assunto: passa pelo mesmo filtro dos feeds
       const resp = new Response(JSON.stringify({ q, fonte: nome, itens }), { headers: { ...cab, "cache-control": "public, max-age=300, s-maxage=600" } });
       if (cache) await cache.put(chave, resp.clone());
       return resp;

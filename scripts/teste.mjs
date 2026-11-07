@@ -30,4 +30,20 @@ for (const i of man.icons) readFileSync(new URL(i.src, raiz)); // o arquivo exis
 const est = JSON.parse(readFileSync(new URL("data/estados.json", raiz)));
 assert.equal(est.proj.length, 4, "parâmetros da projeção para o mapa em graus"); assert.ok(est.linhas.length > 1000, "linhas de estado");
 const sw = readFileSync(new URL("sw.js", raiz), "utf8"); assert.ok(/VERSAO/.test(sw) && /fetch/.test(sw));
+// --- filtro de assunto e ligação com municípios ---
+const { relevante, temasDe } = await import("../shared/relevancia.mjs");
+const { leFeed, localiza } = await import("../relay/noticias.mjs");
+for (const t of ["Temporal derruba árvores e deixa 50 mil sem luz", "Defesa Civil emite alerta de chuva forte", "Incêndio florestal avança no Pantanal", "Inmet alerta para baixa umidade em 100 cidades", "Terremoto de magnitude 4 é sentido em Minas"]) assert.ok(relevante(t), "deve passar: " + t);
+for (const t of ["Flamengo vence e assume a liderança do Brasileirão", "Sob chuva, Norris conquista pole no GP de São Paulo", "Toni Tornado e os bailes do Rio", "Incêndio em prédio deixa dois feridos", "Cantor cancela show e reage a temporal", "Dólar fecha em alta"]) assert.ok(!relevante(t), "deve cair: " + t);
+assert.deepEqual(temasDe("Queimadas e fumaça cobrem a cidade"), ["fogo"]);
+const fe = leFeed(`<feed><entry><title>Chuva forte em Petrópolis</title><link rel="alternate" href="https://exemplo.com/x"/><updated>2026-11-07T10:00:00Z</updated><summary>&lt;p&gt;Resumo&lt;/p&gt;</summary></entry></feed>`);
+assert.equal(fe.length, 1); assert.equal(fe[0].u, "https://exemplo.com/x"); assert.equal(fe[0].r, "Resumo");
+const rdf = leFeed(`<rdf:RDF><item rdf:about="https://a.gov.br/1"><title>Cemaden alerta</title><link>https://a.gov.br/1</link><dc:date>2026-11-07T10:00:00Z</dc:date></item></rdf:RDF>`);
+assert.equal(rdf.length, 1);
+const nome = (r) => r.m.map((i) => geo.n[i]);
+assert.deepEqual(nome(localiza("Temporal causa estragos em Petrópolis, na Região Serrana", "")), ["Petrópolis"]);
+assert.deepEqual(nome(localiza("Morreram 23 bezerros em fazenda", "")), [], "palavra comum em minúscula não é município");
+assert.deepEqual(nome(localiza("Chuva forte atinge o interior de São Paulo", "")), [], "interior de X não é a cidade X");
+assert.deepEqual(nome(localiza("Chuva em Bom Jesus (PI)", "")).length, 1, "nome repetido resolvido pela sigla");
+assert.deepEqual(nome(localiza("Chuva forte no Rio Grande do Sul", "")), [], "estado não vira município");
 console.log("ok: todos os testes passaram");

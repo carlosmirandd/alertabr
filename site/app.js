@@ -29,7 +29,7 @@
   // espaço livre para o mapa entre os cartões (o mapa em si ocupa a tela inteira)
   function insets() {
     const W = innerWidth, H = innerHeight, R = (s) => { const e = $(s); return e && e.offsetParent !== null ? e.getBoundingClientRect() : null; }, res = R("#resumo"), t = res ? res.bottom + 8 : 60;
-    if (desk()) { const e = R("#aba-agora"), d = R("#aba-noticias"); return { l: e ? e.right + 12 : 0, r: d ? W - d.left + 12 : 0, t, b: 40 }; }
+    if (desk()) { const e = R("#aba-agora"), d = R("#aba-noticias"), ad = R(".anuncio"); return { l: e ? e.right + 12 : 0, r: d ? W - d.left + 12 : 0, t, b: 40 + (ad ? ad.height : 0) }; }
     const p = $("#painel").getBoundingClientRect(), c = R(".ceu"), l = R(".lista, .detalhe");
     if (matchMedia("(max-height:559px) and (orientation:landscape)").matches) { const g = R(".grip"); return { l: c ? c.right + 8 : 0, r: l ? W - l.left + 8 : 0, t, b: g ? H - g.top + 6 : 8 }; }
     return { l: 0, r: 0, t, b: $("#painel").classList.contains("alto") ? 0 : Math.max(0, H - p.top + 8) };
@@ -189,7 +189,7 @@
       ${o.pils.length ? `<div class="pils" role="group" aria-label="Avisos">${o.pils.map((p) => `<button type="button" class="pil${p.on ? " on" : ""}" data-pil="${p.pos}" aria-pressed="${p.on}"><svg class="ic"><use href="#i-${ICONE[tipoCeu(p.a)]}"/></svg><em>${esc(p.a.t)}</em><b>${esc(p.txt)}</b></button>`).join("")}</div>` : ""}
     </section>`;
   }
-  const RODAPE = '<footer class="rodape">Dados: <a href="https://alertas2.inmet.gov.br/" target="_blank" rel="noopener">INMET</a> · <a href="https://terrabrasilis.dpi.inpe.br/queimadas/portal/" target="_blank" rel="noopener">INPE Queimadas</a> · malhas <a href="https://www.ibge.gov.br/" target="_blank" rel="noopener">IBGE</a> · notícias Google Notícias. Em emergência ligue <b>199</b> ou <b>193</b>.</footer>';
+  const RODAPE = '<footer class="rodape">Dados: <a href="https://alertas2.inmet.gov.br/" target="_blank" rel="noopener">INMET</a> · <a href="https://terrabrasilis.dpi.inpe.br/queimadas/portal/" target="_blank" rel="noopener">INPE Queimadas</a> · malhas <a href="https://www.ibge.gov.br/" target="_blank" rel="noopener">IBGE</a> · <a href="https://www.gdacs.org/" target="_blank" rel="noopener">GDACS</a> · <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a> · notícias dos veículos citados. <a href="sobre.html">Sobre</a> · <a href="privacidade.html">Privacidade</a>. Em emergência ligue <b>199</b> ou <b>193</b>.</footer>';
   const horaTxt = () => new Date(D.gerado).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   function pintaAgora() {
     const el = $("#aba-agora"); if (!D) { el.innerHTML = '<p class="vazio esq">Buscando os dados mais recentes…</p>'; return; }
@@ -245,16 +245,55 @@
   }
 
   // ---------- cartão da direita: notícias ----------
-  const TEMAS = { todos: '(chuva OR alagamento OR queimada OR incêndio OR "Defesa Civil" OR temporal OR seca)', chuva: "(chuva OR alagamento OR enchente OR temporal OR deslizamento)", fogo: '(queimada OR incêndio OR "foco de calor" OR fumaça)', calor: '("onda de calor" OR seca OR "baixa umidade" OR calor)' };
+  // Fonte principal: noticias.json (feeds de veículos e órgãos lidos pelo relay, já filtrados por assunto e ligados aos municípios).
+  // Complemento: /api/noticias (Google Notícias/Bing), que preenche o que faltar. O mesmo filtro de assunto vale para os dois.
+  const TEMAS = { todos: '(chuva OR alagamento OR queimada OR incêndio OR "Defesa Civil" OR temporal OR seca)', chuva: "(chuva OR alagamento OR enchente OR temporal OR deslizamento)", fogo: '(queimada OR incêndio OR "foco de calor" OR fumaça)', calor: '("onda de calor" OR seca OR "baixa umidade" OR geada OR "frio intenso")', outros: "(terremoto OR tremor OR ciclone OR tornado OR vendaval OR granizo OR ressaca)" };
+  const CHIPS = [["todos", "Tudo"], ["chuva", "Chuva"], ["fogo", "Queimadas"], ["calor", "Calor, frio e seca"], ["outros", "Outros riscos"]];
   const cacheN = new Map(), tabletCards = () => matchMedia("(min-width:600px) and (max-width:999px) and (min-height:800px)").matches, secundariaVisivel = () => desk() || $("#painel").classList.contains("alto"), noticiasVisivel = () => secundariaVisivel() || tabletCards();
+  let feedN = null;
+  const carregaFeed = () => {
+    if (feedN && Date.now() - feedN.t < 300000) return feedN.p;
+    const urls = (location.hostname === "localhost" || location.hostname === "127.0.0.1" ? [CFG.LOCAL_NOTICIAS] : [CFG.NOTICIAS && CFG.NOTICIAS + "?v=" + Math.floor(Date.now() / 60000), CFG.LOCAL_NOTICIAS]).filter(Boolean);
+    const p = (async () => { for (const u of urls) { try { const j = await json(u, 12000); if (j && Array.isArray(j.itens)) return j; } catch (e) { /* tenta a próxima */ } } return null; })();
+    feedN = { t: Date.now(), p }; return p;
+  };
+  const tok = (t) => new Set(norm(t).split(/[^a-z0-9]+/).filter((w) => w.length > 3));
+  const jac = (a, b) => { let i = 0; for (const x of a) if (b.has(x)) i++; return i / (a.size + b.size - i || 1); };
+  const semRepetidos = (lista) => { const out = [], ts = []; for (const n of lista) { const k = tok(n.t); if (ts.some((x) => jac(x, k) > 0.55)) continue; ts.push(k); out.push(n); } return out; };
+  function listaDoFeed(j) { // monta a ordem: o do município, depois o do estado, depois o do Brasil
+    const t = tema, uf = sel >= 0 ? Math.floor(G.c[sel] / 100000) : 0;
+    const ok = (n) => t === "todos" || n.tm.includes(t), ate = Date.now() - 4 * 864e5;
+    const itens = (j.itens || []).filter((n) => ok(n) && n.d > ate);
+    const ev = (j.eventos || []).filter((e) => t === "outros" || (t === "todos" ? e.nv >= 2 : e.tm.includes(t) && e.nv >= 2));
+    if (sel < 0) return { principal: semRepetidos([...ev, ...itens].sort((a, b) => (b.nv || 0) - (a.nv || 0) || b.d - a.d)), extra: [] };
+    const loc = itens.filter((n) => n.m.includes(sel)), est = itens.filter((n) => !n.m.includes(sel) && n.s.includes(uf));
+    return { principal: loc, extra: semRepetidos([...ev.filter((e) => t === "outros"), ...est]) };
+  }
   function pintaNoticias() {
     if (!noticiasVisivel()) { sujo.n = true; return; } sujo.n = false;
-    const el = $("#aba-noticias"), local = sel >= 0;
-    el.innerHTML = `<h3>${local ? "Notícias · " + esc(G.n[sel]) : "Notícias · Brasil"}</h3><div class="chips">${[["todos", "Tudo"], ["chuva", "Chuva"], ["fogo", "Queimadas"], ["calor", "Calor e seca"]].map(([k, n]) => `<button data-tema="${k}" aria-pressed="${tema === k}">${n}</button>`).join("")}</div><div id="listaN"><p class="vazio esq">Buscando notícias…</p></div>`;
-    const q = (local ? `"${G.n[sel]}" ${ufDe(sel)} ` : "") + TEMAS[tema];
-    const mostra = (j) => { const L = $("#listaN"); if (!L || q !== (sel >= 0 ? `"${G.n[sel]}" ${ufDe(sel)} ` : "") + TEMAS[tema]) return; L.innerHTML = j.itens && j.itens.length ? j.itens.slice(0, 7).map((n) => `<a class="not" href="${esc(n.u)}" target="_blank" rel="noopener noreferrer"><b>${esc(n.t)}</b><small>${esc(n.f || "")}${n.d ? " · " + ha(n.d) : ""}${n.n > 1 ? " · " + n.n + " fontes" : ""}</small></a>`).join("") : '<p class="vazio">Nenhuma notícia recente encontrada' + (j.erro ? " (fonte indisponível agora)" : "") + `.</p><a class="btn sec" style="display:inline-flex;align-items:center;margin:4px" href="https://news.google.com/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener noreferrer">Buscar no Google Notícias</a>`; cabeNoticias(); };
-    const c = cacheN.get(q); if (c && Date.now() - c.t < 600000) { mostra(c.j); return; }
-    json("/api/noticias?q=" + encodeURIComponent(q), 15000).then((j) => { cacheN.set(q, { t: Date.now(), j }); if (cacheN.size > 40) cacheN.delete(cacheN.keys().next().value); mostra(j); }).catch(() => mostra({ itens: [], erro: 1 }));
+    const el = $("#aba-noticias"), local = sel >= 0, ch = sel + "|" + tema, nome = local ? G.n[sel] : "", sigla = local ? ufDe(sel) : "";
+    el.innerHTML = `<h3>${local ? "Notícias · " + esc(nome) : "Notícias · Brasil"}</h3><div class="chips">${CHIPS.map(([k, n]) => `<button data-tema="${k}" aria-pressed="${tema === k}">${n}</button>`).join("")}</div><div id="listaN"><p class="vazio esq">Buscando notícias…</p></div>`;
+    const q = (local ? `"${nome}" ${sigla} ` : "") + TEMAS[tema];
+    let feed = undefined, api = undefined; // undefined = ainda carregando; null = falhou
+    const item = (n) => `<a class="not" href="${esc(n.u)}" target="_blank" rel="noopener noreferrer"><b>${esc(n.t)}</b><small>${esc(n.f || "")}${n.o ? " · oficial" : ""}${n.d ? " · " + ha(n.d) : ""}${n.n > 1 ? " · " + n.n + " fontes" : ""}</small></a>`;
+    const desenha = () => {
+      const L = $("#listaN"); if (!L || ch !== sel + "|" + tema) return;
+      if (feed === undefined && api === undefined) return;
+      const f = feed ? listaDoFeed(feed) : { principal: [], extra: [] }, a = (api && api.itens) || [];
+      // município: o que cita a cidade vem primeiro (feeds, depois busca); sem nada local, mostra o estado e avisa
+      const ap = local ? a.filter((n) => norm(n.t).includes(norm(nome))) : a;
+      let lista = semRepetidos(local ? [...f.principal, ...ap] : [...f.principal, ...a].sort((x, y) => (y.nv || 0) - (x.nv || 0) || y.d - x.d));
+      let aviso = "";
+      if (lista.length < 3 && local && f.extra.length) { aviso = `<p class="vazio esq">Pouca coisa sobre ${esc(nome)}. Mais notícias em ${esc(sigla)}:</p>`; lista = semRepetidos([...lista, ...f.extra]); }
+      lista = lista.slice(0, 7);
+      if ((feed === undefined || api === undefined) && !lista.length) return; // espera o outro lado antes de dizer que não há nada
+      const falhou = feed === null && (api === null || (api && api.erro));
+      L.innerHTML = lista.length ? aviso + lista.map(item).join("") : `<p class="vazio">Nenhuma notícia recente sobre o assunto${falhou ? " (fontes indisponíveis agora)" : ""}.</p><a class="btn sec" style="display:inline-flex;align-items:center;margin:4px" href="https://news.google.com/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener noreferrer">Buscar no Google Notícias</a>`;
+      cabeNoticias();
+    };
+    carregaFeed().then((j) => { feed = j; desenha(); });
+    const c = cacheN.get(q); if (c && Date.now() - c.t < 600000) { api = c.j; desenha(); return; }
+    json("/api/noticias?q=" + encodeURIComponent(q), 15000).then((j) => { cacheN.set(q, { t: Date.now(), j }); if (cacheN.size > 40) cacheN.delete(cacheN.keys().next().value); api = j; desenha(); }).catch(() => { api = null; desenha(); });
   }
 
   // ---------- cartão da direita: imagem para compartilhar ----------
