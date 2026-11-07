@@ -30,3 +30,13 @@ jobs:
             echo "Secrets da Cloudflare não configurados: nada a publicar."; exit 0
           fi
           node relay/relay.mjs --uma
+      - name: Diagnóstico do token (não imprime o segredo)
+        if: ${{ failure() }}
+        env:
+          T: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          A: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "tamanho do token: ${#T} | tamanho do account id: ${#A}"
+          for u in "user/tokens/verify" "accounts/$A/tokens/verify" "accounts/$A/r2/buckets"; do
+            echo "== $u"; curl -s -H "Authorization: Bearer $T" "https://api.cloudflare.com/client/v4/$u" | head -c 400; echo
+          done
