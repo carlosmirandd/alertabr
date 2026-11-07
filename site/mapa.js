@@ -4,7 +4,7 @@
    - durante arrastar/zoom move a imagem já pronta (CSS transform) e redesenha só quando para;
    - o canvas tem teto de pixels, então telas 4K não ficam pesadas. */
 (function () {
-  const NEUTRO = "#2a3340", BORDA = "rgba(255,255,255,.13)", UFLINHA = "rgba(255,255,255,.55)";
+  const NEUTRO = "#262320", BORDA = "rgba(255,255,255,.1)", UFLINHA = "rgba(250,250,249,.5)";
 
   function caixa(d) { // caixa [x0,y0,x1,y1] de um caminho SVG relativo (M x,y l dx,dy ... z)
     const n = d.match(/-?\d*\.?\d+/g); let x = 0, y = 0, x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, abs = true;
@@ -71,7 +71,7 @@
       cx.setTransform(v.k * dpr, 0, 0, v.k * dpr, -v.x * v.k * dpr, -v.y * v.k * dpr);
       const x0 = v.x, y0 = v.y, x1 = v.x + this.w / v.k, y1 = v.y + this.h / v.k, det = v.k > this.kMin() * 3.5, dest = this.destaque;
       cx.lineJoin = "round"; cx.lineWidth = 0.9 / v.k; // o traço cobre as frestas entre municípios (a malha é simplificada)
-      let ult = ""; const dim = "#202833";
+      let ult = ""; const dim = "#1a1917";
       for (let i = 0; i < this.n; i++) {
         const b = this.box[i]; if (b[2] < x0 || b[0] > x1 || b[3] < y0 || b[1] > y1) continue;
         const c = dest && !dest.has(i) ? dim : this.cor(i); if (c !== ult) { cx.fillStyle = c; cx.strokeStyle = det ? BORDA : c; ult = c; }
@@ -81,7 +81,7 @@
       if (this.sel >= 0) { cx.lineWidth = 2.4 / v.k; cx.strokeStyle = "#fff"; cx.stroke(this.paths[this.sel]); }
       if (this.hover >= 0 && this.hover !== this.sel) { cx.lineWidth = 1.6 / v.k; cx.strokeStyle = "#ffffffcc"; cx.stroke(this.paths[this.hover]); }
       if (v.k < this.kMin() * 2.6) { // siglas dos estados
-        cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.font = "700 11px system-ui, sans-serif"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.lineWidth = 3; cx.strokeStyle = "rgba(10,14,20,.75)"; cx.fillStyle = "#fff";
+        cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.font = "700 11px system-ui, sans-serif"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.lineWidth = 3; cx.strokeStyle = "rgba(15,14,13,.8)"; cx.fillStyle = "#fff";
         for (const u in this.estLab) { const p = this.estLab[u], sx = (p[0] - v.x) * v.k, sy = (p[1] - v.y) * v.k; if (sx < 0 || sy < 0 || sx > this.w || sy > this.h) continue; cx.strokeText(u, sx, sy); cx.fillText(u, sx, sy); }
       }
       this.feito = { x: v.x, y: v.y, k: v.k }; this.cv.style.transform = "";

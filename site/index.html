@@ -5,14 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>alertabr · alertas e focos de calor por município</title>
 <meta name="description" content="Mapa ao vivo dos avisos do INMET e dos focos de calor do INPE em todos os municípios do Brasil, com notícias locais e cartões para compartilhar.">
-<meta name="theme-color" content="#0c1117">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c1117'/%3E%3Cpath d='M16 5 28 26H4z' fill='%23ff9900'/%3E%3Crect x='14.6' y='13' width='2.8' height='7' rx='1.4' fill='%230c1117'/%3E%3Ccircle cx='16' cy='23' r='1.6' fill='%230c1117'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0f0e0d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f0e0d'/%3E%3Cpath d='M16 5 28 26H4z' fill='%23ff9900'/%3E%3Crect x='14.6' y='13' width='2.8' height='7' rx='1.4' fill='%230f0e0d'/%3E%3Ccircle cx='16' cy='23' r='1.6' fill='%230f0e0d'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Faustina:wght@500;600&family=Geist:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="app" id="app">
   <header class="topo">
-    <div class="marca"><svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><path d="M16 4 29 27H3z" fill="#ff9900"/><rect x="14.6" y="12" width="2.8" height="8" rx="1.4" fill="#0c1117"/><circle cx="16" cy="23.4" r="1.7" fill="#0c1117"/></svg><b>alertabr</b></div>
+    <div class="marca"><svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><path d="M16 4 29 27H3z" fill="#ff9900"/><rect x="14.6" y="12" width="2.8" height="8" rx="1.4" fill="#0f0e0d"/><circle cx="16" cy="23.4" r="1.7" fill="#0f0e0d"/></svg><b>alertabr</b></div>
     <div class="busca">
       <input id="q" type="search" placeholder="Buscar município…" autocomplete="off" aria-label="Buscar município" role="combobox" aria-expanded="false" aria-controls="sug">
       <ul id="sug" class="sug" role="listbox" hidden></ul>
@@ -23,6 +25,17 @@
     </div>
     <div class="status" id="status" aria-live="polite"><i class="dot"></i><span id="stTxt">carregando…</span></div>
   </header>
+
+  <section class="placar" id="placar" aria-label="Resumo nacional">
+    <div class="pl-grid">
+      <div class="pl s3"><span class="rot"><i></i>Grande perigo</span><b id="pl3">–</b><small>municípios hoje</small></div>
+      <div class="pl s2"><span class="rot"><i></i>Perigo</span><b id="pl2">–</b><small>municípios hoje</small></div>
+      <div class="pl s1"><span class="rot"><i></i>Potencial</span><b id="pl1">–</b><small>municípios hoje</small></div>
+      <div class="pl fogo"><span class="rot"><i></i>Focos<span class="so-d"> de calor</span></span><b id="plF">–</b><small>últimas 24 h</small></div>
+    </div>
+    <div class="barra" aria-hidden="true"><i class="b3" id="bb3"></i><i class="b2" id="bb2"></i><i class="b1" id="bb1"></i></div>
+    <div class="barra-txt" id="barraTxt">Carregando…</div>
+  </section>
 
   <main class="corpo">
     <section class="mapa" id="mapa" aria-label="Mapa do Brasil por município">

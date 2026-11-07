@@ -2,8 +2,8 @@
 (function () {
   const CFG = window.ALERTABR, $ = (s) => document.querySelector(s);
   const UFS = { 11: "RO", 12: "AC", 13: "AM", 14: "RR", 15: "PA", 16: "AP", 17: "TO", 21: "MA", 22: "PI", 23: "CE", 24: "RN", 25: "PB", 26: "PE", 27: "AL", 28: "SE", 29: "BA", 31: "MG", 32: "ES", 33: "RJ", 35: "SP", 41: "PR", 42: "SC", 43: "RS", 50: "MS", 51: "MT", 52: "GO", 53: "DF" };
-  const COR_SEV = { 0: "#2a3340", 1: "#ffd60a", 2: "#ff9900", 3: "#f80703" }, NOME_SEV = window.Cartao.NOME_SEV;
-  const COR_FOGO = ["#2a3340", "#ffc27a", "#ff9a3c", "#f2641a", "#c8311a", "#7d1410"]; // 0, 1, 2-3, 4-9, 10-24, 25+
+  const COR_SEV = { 0: "#262320", 1: "#ffd60a", 2: "#ff9900", 3: "#f80703" }, NOME_SEV = window.Cartao.NOME_SEV;
+  const COR_FOGO = ["#262320", "#ffc27a", "#ff9a3c", "#f2641a", "#c8311a", "#7d1410"]; // 0, 1, 2-3, 4-9, 10-24, 25+
   const fmt = (n) => Number(n || 0).toLocaleString("pt-BR");
   const esc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const norm = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -38,7 +38,7 @@
         fonteOk = (fonteOk + k) % urls.length;
         // um arquivo local mais velho que o que já temos não substitui os dados
         if (D && j.gerado <= D.gerado) { status(); return; }
-        D = j; semDados = false; montaMembros(); mapa.setCor(corDe); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null); legenda(); pintaAgora(); if (aba === "cartao") pintaCartao(); status(); return;
+        D = j; semDados = false; montaMembros(); mapa.setCor(corDe); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null); legenda(); pintaPlacar(); pintaAgora(); if (aba === "cartao") pintaCartao(); status(); return;
       } catch (e) { /* tenta a próxima fonte */ }
     }
     if (primeira || semDados) status("erro");
@@ -57,6 +57,22 @@
     t.textContent = "atualizado " + ha(D.gerado) + (fora.length ? " · " + fora.map((x) => x.toUpperCase()).join(", ") + " fora do ar" : "") + (idade > CFG.VELHO ? " · dados antigos" : "");
   }
   setInterval(() => { if (D && !document.hidden) status(); }, 30000);
+
+  // ---------- placar (números grandes com contagem animada) ----------
+  const tw = new Map();
+  function conta(id, para) {
+    const el = $("#" + id), de = tw.has(id) ? tw.get(id) : null; tw.set(id, para);
+    if (de == null || document.hidden || matchMedia("(prefers-reduced-motion: reduce)").matches || de === para) { el.textContent = fmt(para); return; }
+    const t0 = performance.now(), dur = 700;
+    (function passo(t) { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(Math.round(de + (para - de) * e)); if (k < 1 && tw.get(id) === para) requestAnimationFrame(passo); else el.textContent = fmt(para); })(t0);
+  }
+  function pintaPlacar() {
+    if (!D) return; const r = resumoBr(), tot = G.c.length;
+    conta("pl3", r.sev[3]); conta("pl2", r.sev[2]); conta("pl1", r.sev[1]); conta("plF", r.focos);
+    const soma = r.sev[1] + r.sev[2] + r.sev[3];
+    $("#bb3").style.width = (r.sev[3] / tot * 100) + "%"; $("#bb2").style.width = (r.sev[2] / tot * 100) + "%"; $("#bb1").style.width = (r.sev[1] / tot * 100) + "%";
+    $("#barraTxt").textContent = fmt(soma) + " de " + fmt(tot) + " municípios (" + (soma / tot * 100).toFixed(1).replace(".", ",") + " %) com aviso do INMET hoje";
+  }
 
   // ---------- cores e legenda ----------
   function corDe(i) { if (!D) return COR_SEV[0]; return camada === "alertas" ? COR_SEV[D.s[i]] : COR_FOGO[balde(D.f[i])]; }
@@ -92,8 +108,6 @@
     const r = resumoBr(), hoje = D.alertas.map((a, p) => [a, p]).filter(([a]) => a.h === 0), fut = D.alertas.map((a, p) => [a, p]).filter(([a]) => a.h === 1);
     const card = ([a, p]) => `<div class="card${p === destaquePos ? " on" : ""}" style="--c:${esc(a.cor)}" data-alerta="${p}" tabindex="0" role="button"><h4><span>${esc(a.t)}</span><small>${fmt(a.n)} municípios</small></h4><p><span class="tag">${NOME_SEV[a.sev] || ""}</span>${esc(a.uf)}</p></div>`;
     el.innerHTML = `<h2>Brasil agora</h2><p class="sub">Toque no mapa, busque uma cidade ou escolha um aviso abaixo.</p>
-      <div class="num"><div><b style="color:var(--s3)">${fmt(r.sev[3])}</b><span>grande perigo</span></div><div><b style="color:var(--s2)">${fmt(r.sev[2])}</b><span>perigo</span></div><div><b style="color:var(--s1)">${fmt(r.sev[1])}</b><span>potencial</span></div></div>
-      <p class="sub">municípios com aviso do INMET hoje · <b style="color:var(--fogo)">${fmt(r.focos)}</b> focos de calor em 24 h</p>
       <h3>Avisos de hoje (${hoje.length})</h3>${hoje.length ? hoje.map(card).join("") : '<p class="vazio">Nenhum aviso ativo hoje.</p>'}
       ${fut.length ? `<h3>Próximos dias (${fut.length})</h3>` + fut.map(card).join("") : ""}
       <h3>Municípios com mais focos (24 h)</h3>${r.top.length ? '<ul class="top">' + r.top.map((t) => `<li data-cid="${t.i}"><span>${esc(t.nome)} · ${t.uf}</span><b>${fmt(t.n)}</b></li>`).join("") + "</ul>" : '<p class="vazio">Sem focos registrados.</p>'}

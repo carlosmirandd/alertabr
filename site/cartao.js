@@ -1,7 +1,7 @@
 /* Gerador de cartões compartilháveis (PNG) em canvas. Formatos: "post" 1080x1080 e "stories" 1080x1920.
    Tudo é desenhado no navegador: nenhuma imagem sai do aparelho e nenhuma biblioteca é carregada. */
 (function () {
-  const FONTE = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  const FONTE = '"Geist", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
   const NOME_SEV = { 1: "Perigo potencial", 2: "Perigo", 3: "Grande perigo" };
   const lum = (hex) => { const n = parseInt(hex.replace("#", "").padEnd(6, "0").slice(0, 6), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
 
@@ -28,7 +28,7 @@
   function gera(d) {
     const W = 1080, H = d.formato === "stories" ? 1920 : 1080, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     const cx = cv.getContext("2d"), cor = d.nacional ? "#FF9900" : d.alerta ? d.alerta.cor : "#FF7A1A", claro = lum(cor) > 0.6, M = 72, L = W - M * 2;
-    const g = cx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#111821"); g.addColorStop(1, "#0a0e14"); cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+    const g = cx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#1b1a17"); g.addColorStop(1, "#0f0e0d"); cx.fillStyle = g; cx.fillRect(0, 0, W, H);
     cx.fillStyle = cor; cx.fillRect(0, 0, W, 22);
     let y = 70;
     // etiqueta
