@@ -357,7 +357,7 @@
     $("#buscaIc").addEventListener("click", abreBusca);
     $("#aba-agora").addEventListener("wheel", (e) => { const p = e.target.closest(".pils"); if (p && p.scrollWidth > p.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { p.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false }); // roda do mouse rola a faixa de avisos na horizontal
     $("#painel").addEventListener("click", (e) => {
-      const t = e.target.closest("[data-pil],[data-alerta],[data-cid],[data-ir],[data-uf],[data-limpa],[data-tema],[data-fmt],[data-baixa],[data-comp],[data-fut]"); if (!t) return; const d = t.dataset;
+      const t = e.target.closest("[data-pil],[data-alerta],[data-cid],[data-ir],[data-uf],[data-limpa],[data-tema],[data-fmt],[data-baixa],[data-comp],[data-fut]"); if (!t || t === document.documentElement || !e.currentTarget.contains(t)) return; const d = t.dataset; // <html data-tema="escuro"> também casa com o seletor: ignora tudo que está fora do painel
       if (d.pil != null) { const p = +d.pil; if (sel >= 0) { pilSel = p; pintaAgora(); } else { destaquePos = destaquePos === p ? -1 : p; mapa.setDestaque(destaquePos >= 0 ? membros[p] : null); if (destaquePos >= 0) { setCamada("alertas"); mapa.zoomLista([...membros[p]]); } pintaAgora(); } }
       else if (d.alerta != null) { const p = +d.alerta; destaquePos = destaquePos === p ? -1 : p; mapa.setDestaque(destaquePos >= 0 ? membros[p] : null); if (destaquePos >= 0) { setCamada("alertas"); mapa.zoomLista([...membros[p]]); if (folha()) painelAltura("meio"); } pintaAgora(); }
       else if (d.cid != null) { seleciona(+d.cid); }
