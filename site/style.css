@@ -294,6 +294,16 @@ html.com-ads { --safe-b: calc(env(safe-area-inset-bottom, 0px) + var(--ad-h)); }
 .consent p { margin: 0; flex: 1; } .consent a { color: inherit; } .consent div { display: flex; flex-direction: column; gap: 6px; flex: none; } .consent .btn { white-space: nowrap; min-height: 34px; }
 @media (max-width: 520px) { .consent { flex-direction: column; align-items: stretch; } .consent div { flex-direction: row; } .consent .btn { flex: 1; } }
 
+.h-vol { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .btn.mini { min-height: 28px; padding: 0 10px; font-size: 12px; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+/* desktop: todos os cartões rolam na vertical (e a faixa de avisos na horizontal, com a roda do mouse) */
+@media (min-width: 1000px) and (min-height: 560px) {
+  #aba-agora .lista, #aba-agora .detalhe, #aba-noticias, #aba-cartao { overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--on) 30%, transparent) transparent; }
+  #aba-agora .detalhe { display: flex; flex-direction: column; } #aba-agora .detalhe .card { flex: none; overflow: visible; }
+  #aba-agora .detalhe .clamp3, #aba-agora .detalhe .clamp2 { display: block; -webkit-line-clamp: unset; overflow: visible; }
+  #aba-noticias .not b { -webkit-line-clamp: 3; }
+  .pils { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.4) transparent; } .pils::-webkit-scrollbar { display: block; height: 6px; } .pils::-webkit-scrollbar-thumb { background: rgba(255,255,255,.4); border-radius: 3px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dot, .esq, .gt, .gota, .raio, .fl, .vt, .br, .c-n, .raios, .rs { animation: none !important; } .ceu.ani { animation: none; }
   .btn, .pil, .barra-p i, .grip .ic, .camadas button { transition: none; }

@@ -32,13 +32,13 @@
     cx.fillStyle = cor; cx.fillRect(0, 0, W, 22);
     let y = 70;
     // etiqueta
-    const rot = d.nacional ? "PANORAMA DO BRASIL" : d.alerta ? "ALERTA · " + (NOME_SEV[d.alerta.sev] || "").toUpperCase() : "FOCOS DE CALOR · ÚLTIMAS 24 H";
+    const rot = d.nacional ? (d.nacional.rot || "PANORAMA DO BRASIL") : d.alerta ? "ALERTA · " + (NOME_SEV[d.alerta.sev] || "").toUpperCase() : "FOCOS DE CALOR · ÚLTIMAS 24 H";
     cx.font = `800 30px ${FONTE}`; const tw = cx.measureText(rot).width + 44; cx.fillStyle = cor; cx.beginPath(); cx.roundRect(M, y, tw, 56, 28); cx.fill();
     cx.fillStyle = claro ? "#111" : "#fff"; cx.textBaseline = "middle"; cx.fillText(rot, M + 22, y + 30); y += 96;
 
     if (d.nacional) {
       const n = d.nacional, P = d.formato !== "stories", BH = P ? 150 : 190; // no post (quadrado) tudo é mais compacto para a lista caber acima do rodapé
-      y = texto(cx, "Alertas e focos de calor no Brasil", M, y, L, P ? 66 : 78, 800, "#fff", 2, 1.12) + (P ? 18 : 24);
+      y = texto(cx, "Alertas e focos de calor" + (n.sufixo ? " · " + n.sufixo : " no Brasil"), M, y, L, P ? 66 : 78, 800, "#fff", 2, 1.12) + (P ? 18 : 24);
       const caixas = [["Grande perigo", n.sev[3], "#F80703"], ["Perigo", n.sev[2], "#FF9900"], ["Potencial", n.sev[1], "#FFD60A"]], bw = (L - 40) / 3;
       caixas.forEach((c, i) => { const x = M + i * (bw + 20); cx.fillStyle = "rgba(255,255,255,.07)"; cx.beginPath(); cx.roundRect(x, y, bw, BH, 22); cx.fill(); cx.fillStyle = c[2]; cx.fillRect(x, y + 24, 8, BH - 48);
         cx.fillStyle = "#fff"; cx.font = `800 ${P ? 68 : 82}px ${FONTE}`; cx.textBaseline = "alphabetic"; cx.fillText(n.fmt(c[1]), x + 30, y + (P ? 88 : 112)); cx.font = `600 26px ${FONTE}`; cx.fillStyle = "#b7c3d0"; cx.fillText(c[0], x + 30, y + BH - (P ? 30 : 36)); });
