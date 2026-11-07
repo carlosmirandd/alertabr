@@ -21,4 +21,11 @@ assert.ok(geo.c.every((c, i) => i === 0 || c > geo.c[i - 1]), "códigos IBGE em 
 const e = JSON.parse(readFileSync(new URL("../site/data/estado.json", import.meta.url)));
 assert.equal(e.s.length, 5570); assert.equal(e.f.length, 5570);
 assert.ok(e.s.every((x) => x >= 0 && x <= 3));
+const raiz = new URL("../site/", import.meta.url);
+const man = JSON.parse(readFileSync(new URL("manifest.webmanifest", raiz)));
+assert.equal(man.display, "standalone"); assert.ok(man.icons.some((i) => i.purpose === "maskable"), "ícone maskable");
+for (const i of man.icons) readFileSync(new URL(i.src, raiz)); // o arquivo existe
+const est = JSON.parse(readFileSync(new URL("data/estados.json", raiz)));
+assert.equal(est.proj.length, 4, "parâmetros da projeção para o mapa em graus"); assert.ok(est.linhas.length > 1000, "linhas de estado");
+const sw = readFileSync(new URL("sw.js", raiz), "utf8"); assert.ok(/VERSAO/.test(sw) && /fetch/.test(sw));
 console.log("ok: todos os testes passaram");

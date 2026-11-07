@@ -1,0 +1,22 @@
+{
+  "name": "alertabr · alertas e focos de calor por município",
+  "short_name": "alertabr",
+  "description": "Avisos do INMET e focos de calor do INPE em todos os municípios do Brasil, ao vivo.",
+  "lang": "pt-BR",
+  "id": "./",
+  "start_url": "./?pwa=1",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#100e0c",
+  "theme_color": "#100e0c",
+  "categories": ["weather", "utilities", "news"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Focos de calor", "short_name": "Focos", "url": "./?camada=focos" }
+  ]
+}

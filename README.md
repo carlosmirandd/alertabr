@@ -1,20 +1,21 @@
 # alertabr
 
-[![CI](https://github.com/carlosmirandd/alertabr/actions/workflows/ci.yml/badge.svg)](https://github.com/carlosmirandd/alertabr/actions/workflows/ci.yml) ![licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green) ![sem dependências](https://img.shields.io/badge/depend%C3%AAncias-0-blue)
+[![CI](https://github.com/carlosmirandd/alertabr/actions/workflows/ci.yml/badge.svg)](https://github.com/carlosmirandd/alertabr/actions/workflows/ci.yml) ![licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green) ![PWA](https://img.shields.io/badge/PWA-instal%C3%A1vel-5a0fc8)
 
 Mapa ao vivo dos **avisos do INMET** e dos **focos de calor do INPE** em todos os **5.570 municípios** do Brasil, com **notícias locais** e **cartões prontos para compartilhar** (WhatsApp, stories).
 
 Em desastres, a informação oficial fica espalhada entre INMET, INPE, Defesa Civil e jornais locais. O alertabr junta tudo em uma tela: você busca a sua cidade e vê o que está valendo agora, o que fazer e o que a imprensa local está dizendo, e gera uma imagem para mandar para a família.
 
-- Sem build, sem framework, sem chave de API: HTML + JS puro, um relay em Node e uma função de borda.
-- Feito para não travar: o mapa usa `<canvas>` e só redesenha o que está na tela.
+- Sem build, sem framework, sem chave de API: HTML + JS puro, um relay em Node e uma função de borda. A única biblioteca é o [MapLibre GL](https://maplibre.org) (já incluída em `site/vendor/`, licença BSD-3).
+- Feito para não travar: o mapa roda na **GPU** (WebGL/MapLibre) e as cores são trocadas por "estado de feição", sem refazer geometria. Sem WebGL, cai para um mapa em `<canvas>`.
+- **App instalável (PWA)**: abre pela tela inicial, em tela cheia, e mostra o último dado salvo mesmo sem internet.
 
 ## O que tem
 
 | Peça | Onde | O que faz |
 |---|---|---|
 | **Relay** | `relay/` | Lê INMET e INPE, cruza com os códigos IBGE e publica **um** `estado.json` compacto (~100 KB). Mantém o último dado bom de cada fonte se uma cair. |
-| **Mapa** | `site/mapa.js`, `geo/` | Mapa por município em canvas: zoom, arrastar, pinça, clique, busca, camadas Alertas / Focos de calor. A malha vem do IBGE e é simplificada por `geo/build_geo.py`. |
+| **Mapa** | `site/mapa-gl.js` (WebGL), `site/mapa.js` (reserva em canvas), `geo/` | Mapa por município: zoom, arrastar, pinça, clique, busca, nomes de cidades, camadas Alertas / Focos de calor. A malha vem do IBGE e é simplificada por `geo/build_geo.py` com divisas compartilhadas (sem frestas). |
 | **Radar de notícias** | `functions/api/noticias.js` | Busca no Google Notícias por município e tema, junta títulos parecidos, cache de 10 min na borda. |
 | **Cartões** | `site/cartao.js` | PNG 1080×1080 (post) ou 1080×1920 (stories) desenhado no navegador, com o contorno do município, risco, o que fazer e a fonte. |
 
@@ -68,6 +69,20 @@ Para atualizar mais rápido (mínimo 60 s), defina `INTERVALO`. No PowerShell: `
 | `npx wrangler pages dev site` | testar com o ambiente real da Cloudflare (funções), se você tiver o wrangler |
 
 As **notícias** funcionam no `npm run dev`: ele executa a mesma função de `functions/api/noticias.js`. Se você hospedar a pasta `site/` em um servidor estático qualquer (sem funções), tudo funciona, menos a aba Notícias.
+
+## App instalável (PWA)
+
+O site tem `manifest.webmanifest`, ícones (`site/icons/`, gerados por `python scripts/icones.py`) e um service worker (`site/sw.js`). No celular, use "Adicionar à tela inicial"; no computador, o ícone de instalar na barra de endereço. O service worker guarda o site e a geometria e, para os dados ao vivo, tenta a rede primeiro e usa a última cópia se estiver offline. Ele só é registrado fora do `localhost`. Para forçar uma atualização geral do cache, troque `VERSAO` em `sw.js`.
+
+## Relay confiável na nuvem
+
+O agendamento do GitHub Actions costuma atrasar ou pular execuções. Para atualizar a cada 5 minutos de forma confiável, use o worker da Cloudflare em `worker-cron/`, que só pede ao GitHub para rodar o fluxo `relay`:
+
+```bash
+cd worker-cron
+npx wrangler secret put GH_TOKEN     # token fino do GitHub, só neste repositório, permissão "Actions: Read and write"
+npx wrangler deploy
+```
 
 ## Publicar (Cloudflare)
 

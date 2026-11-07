@@ -1,4 +1,4 @@
-# Roda o relay na nuvem (sem o seu computador): lê INMET + INPE e grava o estado.json no R2.
+# Roda o relay na nuvem (sem o seu computador). Quem dispara a cada 5 min é o worker-cron/ (Cloudflare); o agendamento daqui é só reserva.: lê INMET + INPE e grava o estado.json no R2.
 # Secrets necessários (Settings > Secrets and variables > Actions): CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID.
 # Variáveis opcionais (aba Variables): BUCKET (padrão alertabr) e PREVIO (endereço público do estado.json, para reaproveitar
 # a parte de uma fonte que tenha caído). Sem os secrets, a execução termina sem fazer nada.
@@ -6,7 +6,7 @@ name: relay
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "17,47 * * * *"
 concurrency:
   group: relay
   cancel-in-progress: false

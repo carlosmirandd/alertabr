@@ -4,6 +4,16 @@
   Cache-Control: public, max-age=86400
 /data/estado.json
   Cache-Control: public, max-age=60
+/sw.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
+/icons/*
+  Cache-Control: public, max-age=604800
 /*.js
   Cache-Control: public, max-age=300, must-revalidate
 /*.css
