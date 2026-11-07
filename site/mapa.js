@@ -54,8 +54,8 @@
       };
       this.qa = requestAnimationFrame(passo);
     }
-    zoomCaixa(b, folga = 1.25) { const w = Math.max(b[2] - b[0], 4), h = Math.max(b[3] - b[1], 4), k = Math.min(this.w / (w * folga), this.h / (h * folga));
-      this.vaiPara((b[0] + b[2]) / 2 - this.w / k / 2, (b[1] + b[3]) / 2 - this.h / k / 2, k); }
+    zoomCaixa(b, folga = 1.25) { const ib = this.op.insetBaixo ? this.op.insetBaixo() : 0, hh = Math.max(80, this.h - ib), w = Math.max(b[2] - b[0], 4), h = Math.max(b[3] - b[1], 4), k = Math.min(this.w / (w * folga), hh / (h * folga)); // ib: parte do mapa coberta pela folha
+      this.vaiPara((b[0] + b[2]) / 2 - this.w / k / 2, (b[1] + b[3]) / 2 - hh / k / 2, k); }
     zoomPara(idx) { if (idx >= 0) this.zoomCaixa(this.box[idx], 3.2); }
     zoomLista(lista) { if (!lista.length) return; let b = [1e9, 1e9, -1e9, -1e9]; for (const i of lista) { const q = this.box[i]; if (q[0] < b[0]) b[0] = q[0]; if (q[1] < b[1]) b[1] = q[1]; if (q[2] > b[2]) b[2] = q[2]; if (q[3] > b[3]) b[3] = q[3]; } this.zoomCaixa(b, 1.15); }
     zoomMais(f, px, py, anima) { const v = this.v, antes = v.k, x0 = v.x, y0 = v.y; v.k = antes * f; this.ajusta(); const k = v.k; // mantém o ponto sob o cursor
@@ -79,18 +79,19 @@
       for (const c of [this.cv, this.cvt, this.cvp]) { c.style.transformOrigin = "0 0"; c.style.transform = t; }
       this.cvt.style.opacity = "0"; } // durante o gesto a selecao some; volta quando o desenho termina
     agendaTopo() { if (this.qt) return; this.qt = requestAnimationFrame(() => { this.qt = 0; this.desenhaTopo(); }); }
+    lerTema() { const cs = getComputedStyle(this.el), V = (n, d) => cs.getPropertyValue(n).trim() || d; this.cc = { borda: V("--map-borda", BORDA), uf: V("--map-uf", UFLINHA), dim: V("--map-dim", "#1a1917"), rot: V("--map-rot", "#fff"), halo: V("--map-halo", "rgba(15,14,13,.9)"), sel: V("--on", "#fff") }; }
     tamanho(cv, W, H) { if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; cv.style.width = this.w + "px"; cv.style.height = this.h + "px"; } }
     dprAtual() { let dpr = Math.min(window.devicePixelRatio || 1, 2); const maxPx = 2.6e6; if (this.w * this.h * dpr * dpr > maxPx) dpr = Math.sqrt(maxPx / (this.w * this.h)); return dpr; }
     // camada de cima: so o contorno da cidade selecionada e da que esta sob o mouse (barato, nao toca na camada de cores)
     desenhaTopo() {
       const cx = this.cxt, v = this.v, dpr = this.dprAtual(), W = Math.round(this.w * dpr), H = Math.round(this.h * dpr); this.tamanho(this.cvt, W, H);
       cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, W, H); cx.setTransform(v.k * dpr, 0, 0, v.k * dpr, -v.x * v.k * dpr, -v.y * v.k * dpr); cx.lineJoin = "round";
-      if (this.sel >= 0) { cx.lineWidth = 2.4 / v.k; cx.strokeStyle = "#fff"; cx.stroke(this.paths[this.sel]); }
-      if (this.hover >= 0 && this.hover !== this.sel) { cx.lineWidth = 1.6 / v.k; cx.strokeStyle = "rgba(255,255,255,.8)"; cx.stroke(this.paths[this.hover]); }
+      if (!this.cc) this.lerTema(); if (this.sel >= 0) { cx.lineWidth = 2.4 / v.k; cx.strokeStyle = this.cc.sel; cx.stroke(this.paths[this.sel]); }
+      if (this.hover >= 0 && this.hover !== this.sel) { cx.lineWidth = 1.6 / v.k; cx.strokeStyle = this.cc.sel; cx.globalAlpha = .75; cx.stroke(this.paths[this.hover]); cx.globalAlpha = 1; }
       this.cvt.style.transform = ""; this.cvt.style.opacity = "1";
     }
     desenha() {
-      this.q = 0; const cx = this.cx, v = this.v, dpr = this.dprAtual();
+      this.q = 0; const cx = this.cx, v = this.v, dpr = this.dprAtual(); this.lerTema();
       const W = Math.round(this.w * dpr), H = Math.round(this.h * dpr);
       // dados novos na mesma visao: guarda a imagem antiga e deixa esmaecer por cima (troca suave, sem piscar)
       const fade = this.fade && this.feito && this.cv.width === W && this.cv.height === H && this.feito.k === v.k && this.feito.x === v.x && this.feito.y === v.y; this.fade = false;
@@ -100,16 +101,16 @@
       cx.setTransform(v.k * dpr, 0, 0, v.k * dpr, -v.x * v.k * dpr, -v.y * v.k * dpr);
       const x0 = v.x, y0 = v.y, x1 = v.x + this.w / v.k, y1 = v.y + this.h / v.k, det = v.k > this.kMin() * 2.2, dest = this.destaque;
       cx.lineJoin = "round"; cx.lineWidth = (det ? 0.7 : 0.55) / v.k; // sem zoom: traco da mesma cor esconde so a costura do anti-alias; com zoom: divisa escura fina
-      let ult = ""; const dim = "#1a1917";
+      let ult = ""; const dim = this.cc.dim;
       for (let i = 0; i < this.n; i++) {
         const b = this.box[i]; if (b[2] < x0 || b[0] > x1 || b[3] < y0 || b[1] > y1) continue;
-        const c = dest && !dest.has(i) ? dim : this.cor(i); if (c !== ult) { cx.fillStyle = c; cx.strokeStyle = det ? BORDA : c; ult = c; }
+        const c = dest && !dest.has(i) ? dim : this.cor(i); if (c !== ult) { cx.fillStyle = c; cx.strokeStyle = det ? this.cc.borda : c; ult = c; }
         cx.fill(this.paths[i]); cx.stroke(this.paths[i]);
       }
-      cx.lineWidth = 1.1 / v.k; cx.strokeStyle = UFLINHA; cx.stroke(this.ufPath);
+      cx.lineWidth = 1.1 / v.k; cx.strokeStyle = this.cc.uf; cx.stroke(this.ufPath);
       if (v.k > this.kMin() * 3.2) this.rotulos(cx, dpr, x0, y0, x1, y1);
       if (v.k < this.kMin() * 2.6) { // siglas dos estados
-        cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.font = "700 11px system-ui, sans-serif"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.lineWidth = 3; cx.strokeStyle = "rgba(15,14,13,.8)"; cx.fillStyle = "#fff";
+        cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.font = "700 11px system-ui, sans-serif"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.lineWidth = 3; cx.strokeStyle = this.cc.halo; cx.fillStyle = this.cc.rot;
         for (const u in this.estLab) { const p = this.estLab[u], sx = (p[0] - v.x) * v.k, sy = (p[1] - v.y) * v.k; if (sx < 0 || sy < 0 || sx > this.w || sy > this.h) continue; cx.strokeText(u, sx, sy); cx.fillText(u, sx, sy); }
       }
       this.feito = { x: v.x, y: v.y, k: v.k }; for (const c of [this.cv, this.cvp]) c.style.transform = "";
@@ -140,7 +141,7 @@
         const c = this.centroDe(i), sx = (c[0] - v.x) * v.k, sy = (c[1] - v.y) * v.k; if (sx < 0 || sy < 0 || sx > this.w || sy > this.h) continue;
         const nome = this.nomes[i], w = cx.measureText(nome).width + 6, r = [sx - w / 2, sy - 8, sx + w / 2, sy + 8];
         if (ocupado.some((o) => r[0] < o[2] && r[2] > o[0] && r[1] < o[3] && r[3] > o[1])) continue;
-        ocupado.push(r); cx.strokeStyle = "rgba(15,14,13,.9)"; cx.fillStyle = i === this.sel ? "#fff" : "rgba(250,250,249,.92)"; cx.strokeText(nome, sx, sy); cx.fillText(nome, sx, sy); if (++n >= 90) break;
+        ocupado.push(r); cx.strokeStyle = this.cc.halo; cx.fillStyle = this.cc.rot; cx.strokeText(nome, sx, sy); cx.fillText(nome, sx, sy); if (++n >= 90) break;
       }
     }
 
