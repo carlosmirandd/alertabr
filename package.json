@@ -1,0 +1,37 @@
+{
+  "name": "alertabr",
+  "version": "1.0.0",
+  "description": "Mapa ao vivo de avisos do INMET e focos de calor do INPE por município, com notícias locais e cartões para compartilhar.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "geo": "python geo/build_geo.py",
+    "semente": "node relay/relay.mjs --uma --out site/data",
+    "relay": "node relay/relay.mjs",
+    "dev": "node scripts/dev.mjs",
+    "test": "node scripts/teste.mjs",
+    "deploy": "wrangler pages deploy site --project-name alertabr"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/carlosmirandd/alertabr.git"
+  },
+  "bugs": {
+    "url": "https://github.com/carlosmirandd/alertabr/issues"
+  },
+  "homepage": "https://alertabr.pages.dev",
+  "keywords": [
+    "inmet",
+    "inpe",
+    "queimadas",
+    "alertas",
+    "defesa-civil",
+    "dados-abertos",
+    "mapa",
+    "brasil",
+    "municipios"
+  ]
+}

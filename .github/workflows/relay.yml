@@ -1,0 +1,21 @@
+# Opcional: roda o relay no GitHub Actions em vez de no seu computador.
+# Precisa dos secrets CLOUDFLARE_API_TOKEN (permissão R2 edit) e CLOUDFLARE_ACCOUNT_ID.
+# Para ativar o agendamento, descomente o bloco "schedule". Não testado a partir dos IPs do GitHub.
+name: relay
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "*/10 * * * *"
+jobs:
+  publica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node relay/relay.mjs --uma
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          BUCKET: ${{ vars.BUCKET || 'alertabr' }}

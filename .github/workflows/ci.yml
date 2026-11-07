@@ -1,0 +1,17 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  teste:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/teste.mjs
+      - run: |
+          for f in relay/relay.mjs relay/monta.mjs relay/fontes.mjs site/app.js site/mapa.js site/cartao.js; do node --check "$f"; done

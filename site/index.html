@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>alertabr · alertas e focos de calor por município</title>
+<meta name="description" content="Mapa ao vivo dos avisos do INMET e dos focos de calor do INPE em todos os municípios do Brasil, com notícias locais e cartões para compartilhar.">
+<meta name="theme-color" content="#0c1117">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c1117'/%3E%3Cpath d='M16 5 28 26H4z' fill='%23ff9900'/%3E%3Crect x='14.6' y='13' width='2.8' height='7' rx='1.4' fill='%230c1117'/%3E%3Ccircle cx='16' cy='23' r='1.6' fill='%230c1117'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topo">
+    <div class="marca"><svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><path d="M16 4 29 27H3z" fill="#ff9900"/><rect x="14.6" y="12" width="2.8" height="8" rx="1.4" fill="#0c1117"/><circle cx="16" cy="23.4" r="1.7" fill="#0c1117"/></svg><b>alertabr</b></div>
+    <div class="busca">
+      <input id="q" type="search" placeholder="Buscar município…" autocomplete="off" aria-label="Buscar município" role="combobox" aria-expanded="false" aria-controls="sug">
+      <ul id="sug" class="sug" role="listbox" hidden></ul>
+    </div>
+    <div class="camadas" role="tablist" aria-label="Camada do mapa">
+      <button role="tab" id="c-alertas" aria-selected="true">Alertas</button>
+      <button role="tab" id="c-focos" aria-selected="false">Focos de calor</button>
+    </div>
+    <div class="status" id="status" aria-live="polite"><i class="dot"></i><span id="stTxt">carregando…</span></div>
+  </header>
+
+  <main class="corpo">
+    <section class="mapa" id="mapa" aria-label="Mapa do Brasil por município">
+      <div class="leg" id="leg"></div>
+      <div class="zoom"><button id="zMais" aria-label="Aproximar">+</button><button id="zMenos" aria-label="Afastar">−</button><button id="zBr" aria-label="Ver o Brasil todo">⌂</button></div>
+      <div class="tip" id="tip" hidden></div>
+      <div class="carrega" id="carrega">Carregando o mapa…</div>
+    </section>
+
+    <aside class="painel" id="painel">
+      <div class="grip" id="grip" aria-hidden="true"></div>
+      <nav class="abas" role="tablist">
+        <button role="tab" data-aba="agora" aria-selected="true">Agora</button>
+        <button role="tab" data-aba="noticias" aria-selected="false">Notícias</button>
+        <button role="tab" data-aba="cartao" aria-selected="false">Cartão</button>
+      </nav>
+      <div class="aba" id="aba-agora"></div>
+      <div class="aba" id="aba-noticias" hidden></div>
+      <div class="aba" id="aba-cartao" hidden></div>
+      <footer class="rodape">Dados: <a href="https://alertas2.inmet.gov.br/" target="_blank" rel="noopener">INMET</a> · <a href="https://terrabrasilis.dpi.inpe.br/queimadas/portal/" target="_blank" rel="noopener">INPE Queimadas</a> · malhas <a href="https://www.ibge.gov.br/" target="_blank" rel="noopener">IBGE</a> · notícias Google Notícias. Informação de apoio; em emergência ligue <b>199</b> ou <b>193</b>.</footer>
+    </aside>
+  </main>
+</div>
+<script src="config.js"></script>
+<script src="mapa.js"></script>
+<script src="cartao.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

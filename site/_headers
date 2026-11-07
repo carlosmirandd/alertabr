@@ -1,0 +1,13 @@
+/data/municipios.json
+  Cache-Control: public, max-age=86400
+/data/estados.json
+  Cache-Control: public, max-age=86400
+/data/estado.json
+  Cache-Control: public, max-age=60
+/*.js
+  Cache-Control: public, max-age=300, must-revalidate
+/*.css
+  Cache-Control: public, max-age=300, must-revalidate
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
