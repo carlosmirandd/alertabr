@@ -163,7 +163,7 @@
   function ligaUI() {
     document.querySelectorAll(".abas button").forEach((b) => b.addEventListener("click", () => { mudaAba(b.dataset.aba); if (matchMedia("(max-width:860px)").matches && $("#painel").classList.contains("baixo")) painelAltura("meio"); }));
     $("#c-alertas").addEventListener("click", () => setCamada("alertas")); $("#c-focos").addEventListener("click", () => setCamada("focos"));
-    $("#zMais").addEventListener("click", () => mapa.zoomMais(1.6, mapa.w / 2, mapa.h / 2)); $("#zMenos").addEventListener("click", () => mapa.zoomMais(1 / 1.6, mapa.w / 2, mapa.h / 2));
+    $("#zMais").addEventListener("click", () => mapa.zoomMais(1.6, mapa.w / 2, mapa.h / 2, true)); $("#zMenos").addEventListener("click", () => mapa.zoomMais(1 / 1.6, mapa.w / 2, mapa.h / 2, true));
     $("#zBr").addEventListener("click", () => { destaquePos = -1; mapa.setDestaque(null); seleciona(-1); mapa.resetar(); pintaAgora(); });
     $("#grip").addEventListener("click", () => { const p = $("#painel"); painelAltura(p.classList.contains("baixo") ? "meio" : p.classList.contains("alto") ? "baixo" : "alto"); });
     $("#painel").addEventListener("click", (e) => {
