@@ -5,59 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>alertabr · alertas e focos de calor por município</title>
 <meta name="description" content="Mapa ao vivo dos avisos do INMET e dos focos de calor do INPE em todos os municípios do Brasil, com notícias locais e cartões para compartilhar.">
-<meta name="theme-color" content="#0f0e0d">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f0e0d'/%3E%3Cpath d='M16 5 28 26H4z' fill='%23ff9900'/%3E%3Crect x='14.6' y='13' width='2.8' height='7' rx='1.4' fill='%230f0e0d'/%3E%3Ccircle cx='16' cy='23' r='1.6' fill='%230f0e0d'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Faustina:wght@500;600&family=Geist:wght@400;500;600;700&display=swap">
+<meta name="theme-color" content="#14110f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f2ec" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314110f'/%3E%3Cpath d='M16 5 28 26H4z' fill='%23f5a524'/%3E%3Crect x='14.6' y='13' width='2.8' height='7' rx='1.4' fill='%2314110f'/%3E%3Ccircle cx='16' cy='23' r='1.6' fill='%2314110f'/%3E%3C/svg%3E">
+<script>try { var t = localStorage.getItem("alertabr-tema"); if (t === "claro" || t === "escuro") document.documentElement.dataset.tema = t; } catch (e) {}</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-nuvem" viewBox="0 0 112 76"><path d="M26 76C11 76 0 65 0 51 0 38 9 28 22 26 25 11 38 0 54 0 69 0 81 9 85 22 100 22 112 34 112 49 112 64 100 76 86 76z"/></symbol>
+    <symbol id="i-aviso" viewBox="0 0 24 24"><path d="M12 3.5 2.8 19.5h18.4L12 3.5z"/><path d="M12 10v4.5M12 17.4v.2"/></symbol>
+    <symbol id="i-noticia" viewBox="0 0 24 24"><path d="M5 4.5h11a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2v-13z"/><path d="M18 8.5h1.5a.5.5 0 0 1 .5.5v8.5a2 2 0 0 1-2 2M8.5 8.5h6M8.5 12h6M8.5 15.5h3.5"/></symbol>
+    <symbol id="i-cartao" viewBox="0 0 24 24"><rect x="4" y="4.5" width="16" height="15" rx="3"/><path d="m4.5 16 4-4 3.5 3 3-2.5 4.5 4M15.5 9.2h.01"/></symbol>
+    <symbol id="i-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></symbol>
+    <symbol id="i-lua" viewBox="0 0 24 24"><path d="M20 14.2A8 8 0 1 1 9.8 4a6.4 6.4 0 0 0 10.2 10.2z"/></symbol>
+    <symbol id="i-busca" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></symbol>
+    <symbol id="i-raio" viewBox="0 0 24 24"><path d="M13 2.5 5.5 13.2h5.6L10 21.5l8.5-11.2h-5.7L13 2.5z"/></symbol>
+    <symbol id="i-gota" viewBox="0 0 24 24"><path d="M12 3s6.2 6.3 6.2 11a6.2 6.2 0 0 1-12.4 0C5.8 9.3 12 3 12 3z"/></symbol>
+    <symbol id="i-vento" viewBox="0 0 24 24"><path d="M3 8.5h10.5a2.7 2.7 0 1 0-2.7-2.7M3 12.5h15a2.7 2.7 0 1 1-2.7 2.7M3 16.5h7"/></symbol>
+    <symbol id="i-frio" viewBox="0 0 24 24"><path d="M12 2.5v19M4.2 7l15.6 10M19.8 7 4.2 17M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/></symbol>
+    <symbol id="i-fogo" viewBox="0 0 24 24"><path d="M12 2.5s5.6 4.6 5.6 10a5.6 5.6 0 0 1-11.2 0c0-2.2 1-3.8 2.2-5 .1 2 1 3 2.2 3-.4-3.2-.6-5.2 1.2-8z"/></symbol>
+    <symbol id="i-pino" viewBox="0 0 24 24"><path d="M12 21s6.5-5.7 6.5-11A6.5 6.5 0 0 0 5.5 10c0 5.3 6.5 11 6.5 11z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+    <symbol id="i-neblina" viewBox="0 0 24 24"><path d="M4 8h16M2.5 12h19M4 16h16"/></symbol>
+  </defs>
+</svg>
+
 <div class="app" id="app">
-  <header class="topo">
-    <div class="marca"><svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><path d="M16 4 29 27H3z" fill="#ff9900"/><rect x="14.6" y="12" width="2.8" height="8" rx="1.4" fill="#0f0e0d"/><circle cx="16" cy="23.4" r="1.7" fill="#0f0e0d"/></svg><b>alertabr</b></div>
-    <div class="busca">
-      <input id="q" type="search" placeholder="Buscar município…" autocomplete="off" aria-label="Buscar município" role="combobox" aria-expanded="false" aria-controls="sug">
-      <ul id="sug" class="sug" role="listbox" hidden></ul>
-    </div>
-    <div class="camadas" role="tablist" aria-label="Camada do mapa">
-      <button role="tab" id="c-alertas" aria-selected="true">Alertas</button>
-      <button role="tab" id="c-focos" aria-selected="false">Focos de calor</button>
-    </div>
-    <div class="status" id="status" aria-live="polite"><i class="dot"></i><span id="stTxt">carregando…</span></div>
-  </header>
+  <nav class="nav" id="nav" aria-label="Seções">
+    <div class="nav-marca" aria-hidden="true"><svg viewBox="0 0 32 32" width="28" height="28"><path d="M16 4 29 27H3z" fill="#f5a524"/><rect x="14.6" y="12" width="2.8" height="8" rx="1.4" fill="#14110f"/><circle cx="16" cy="23.4" r="1.7" fill="#14110f"/></svg></div>
+    <button type="button" data-aba="agora" aria-selected="true"><span class="ind"><svg class="ic"><use href="#i-aviso"/></svg></span><span class="rot">Avisos</span></button>
+    <button type="button" data-aba="noticias" aria-selected="false"><span class="ind"><svg class="ic"><use href="#i-noticia"/></svg></span><span class="rot">Notícias</span></button>
+    <button type="button" data-aba="cartao" aria-selected="false"><span class="ind"><svg class="ic"><use href="#i-cartao"/></svg></span><span class="rot">Cartão</span></button>
+  </nav>
 
-  <section class="placar" id="placar" aria-label="Resumo nacional">
-    <div class="pl-grid">
-      <div class="pl s3"><span class="rot"><i></i>Grande perigo</span><b id="pl3">–</b><small>municípios hoje</small></div>
-      <div class="pl s2"><span class="rot"><i></i>Perigo</span><b id="pl2">–</b><small>municípios hoje</small></div>
-      <div class="pl s1"><span class="rot"><i></i>Potencial</span><b id="pl1">–</b><small>municípios hoje</small></div>
-      <div class="pl fogo"><span class="rot"><i></i>Focos<span class="so-d"> de calor</span></span><b id="plF">–</b><small>últimas 24 h</small></div>
-    </div>
-    <div class="barra" aria-hidden="true"><i class="b3" id="bb3"></i><i class="b2" id="bb2"></i><i class="b1" id="bb1"></i></div>
-    <div class="barra-txt" id="barraTxt">Carregando…</div>
-  </section>
+  <div class="principal">
+    <header class="barra">
+      <div class="marca-c"><svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M16 4 29 27H3z" fill="#f5a524"/><rect x="14.6" y="12" width="2.8" height="8" rx="1.4" fill="#14110f"/><circle cx="16" cy="23.4" r="1.7" fill="#14110f"/></svg><b>alertabr</b></div>
+      <div class="busca">
+        <svg class="ic" aria-hidden="true"><use href="#i-busca"/></svg>
+        <input id="q" type="search" placeholder="Buscar município" autocomplete="off" aria-label="Buscar município" role="combobox" aria-expanded="false" aria-controls="sug" enterkeyhint="search">
+        <kbd class="atalho" aria-hidden="true">/</kbd>
+        <ul id="sug" class="sug" role="listbox" hidden></ul>
+      </div>
+      <div class="status" id="status" aria-live="polite"><i class="dot"></i><span id="stTxt">carregando…</span></div>
+      <button type="button" class="icone" id="tema" aria-label="Alternar entre tema claro e escuro"><svg class="ic" id="temaIc"><use href="#i-lua"/></svg></button>
+    </header>
 
-  <main class="corpo">
-    <section class="mapa" id="mapa" aria-label="Mapa do Brasil por município">
-      <div class="leg" id="leg"></div>
-      <div class="zoom"><button id="zMais" aria-label="Aproximar">+</button><button id="zMenos" aria-label="Afastar">−</button><button id="zBr" aria-label="Ver o Brasil todo">⌂</button></div>
-      <div class="tip" id="tip" hidden></div>
-      <div class="carrega" id="carrega">Carregando o mapa…</div>
+    <section class="hero" aria-live="polite">
+      <h1 id="hTitulo">Brasil agora</h1>
+      <p id="hSub">Buscando os dados mais recentes…</p>
     </section>
 
-    <aside class="painel" id="painel">
-      <div class="grip" id="grip" aria-hidden="true"></div>
-      <nav class="abas" role="tablist">
-        <button role="tab" data-aba="agora" aria-selected="true">Agora</button>
-        <button role="tab" data-aba="noticias" aria-selected="false">Notícias</button>
-        <button role="tab" data-aba="cartao" aria-selected="false">Cartão</button>
-      </nav>
-      <div class="aba" id="aba-agora"></div>
-      <div class="aba" id="aba-noticias" hidden></div>
-      <div class="aba" id="aba-cartao" hidden></div>
-      <footer class="rodape">Dados: <a href="https://alertas2.inmet.gov.br/" target="_blank" rel="noopener">INMET</a> · <a href="https://terrabrasilis.dpi.inpe.br/queimadas/portal/" target="_blank" rel="noopener">INPE Queimadas</a> · malhas <a href="https://www.ibge.gov.br/" target="_blank" rel="noopener">IBGE</a> · notícias Google Notícias. Informação de apoio; em emergência ligue <b>199</b> ou <b>193</b>.</footer>
-    </aside>
-  </main>
+    <div class="filtros" id="filtros">
+      <div class="chips-sev" role="group" aria-label="Filtrar por gravidade">
+        <button type="button" class="chip" data-sev="0" aria-pressed="true">Todos <b id="n0">–</b></button>
+        <button type="button" class="chip s3" data-sev="3" aria-pressed="false"><i></i>Grande perigo <b id="n3">–</b></button>
+        <button type="button" class="chip s2" data-sev="2" aria-pressed="false"><i></i>Perigo <b id="n2">–</b></button>
+        <button type="button" class="chip s1" data-sev="1" aria-pressed="false"><i></i>Potencial <b id="n1">–</b></button>
+      </div>
+      <div class="camadas" role="tablist" aria-label="Camada do mapa">
+        <button role="tab" id="c-alertas" aria-selected="true">Alertas</button>
+        <button role="tab" id="c-focos" aria-selected="false">Focos de calor</button>
+      </div>
+    </div>
+
+    <main class="corpo" id="corpo">
+      <section class="mapa" id="mapa" aria-label="Mapa do Brasil por município">
+        <div class="leg" id="leg"></div>
+        <div class="zoom"><button id="zMais" aria-label="Aproximar">+</button><button id="zMenos" aria-label="Afastar">−</button><button id="zBr" aria-label="Ver o Brasil todo"><svg class="ic" aria-hidden="true"><use href="#i-pino"/></svg></button></div>
+        <div class="tip" id="tip" hidden></div>
+        <div class="carrega" id="carrega">Carregando o mapa…</div>
+      </section>
+
+      <aside class="painel" id="painel">
+        <div class="grip" id="grip" role="button" tabindex="0" aria-label="Expandir ou recolher o painel"><i></i></div>
+        <div class="aba" id="aba-agora"></div>
+        <div class="aba" id="aba-noticias" hidden></div>
+        <div class="aba" id="aba-cartao" hidden></div>
+        <footer class="rodape">Dados: <a href="https://alertas2.inmet.gov.br/" target="_blank" rel="noopener">INMET</a> · <a href="https://terrabrasilis.dpi.inpe.br/queimadas/portal/" target="_blank" rel="noopener">INPE Queimadas</a> · malhas <a href="https://www.ibge.gov.br/" target="_blank" rel="noopener">IBGE</a> · notícias Google Notícias. Informação de apoio; em emergência ligue <b>199</b> ou <b>193</b>.</footer>
+      </aside>
+    </main>
+  </div>
 </div>
 <script src="config.js"></script>
 <script src="mapa.js"></script>
