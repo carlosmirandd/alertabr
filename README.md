@@ -84,6 +84,24 @@ npx wrangler secret put GH_TOKEN     # token fino do GitHub, só neste repositó
 npx wrangler deploy
 ```
 
+## Notícias e outros alertas
+
+O relay também publica `noticias.json` (no mesmo bucket do `estado.json`):
+
+- **Feeds** (`relay/feeds.json`): Agência Brasil, Cemaden, Ministério da Integração, INPE, MetSul, ((o))eco, CNN Brasil, Folha e o g1 de cada um dos 27 estados. Cada fonte tem os campos `licenca` (anote ali os termos de uso) e `ativo` (ponha `false` para desligar uma fonte). Só título, link e nome do veículo são guardados.
+- **Filtro de assunto** (`shared/relevancia.mjs`): só passam chuva, alagamento, queimada/foco de calor, calor/frio/seca e outros riscos (terremoto, ciclone, tornado, calamidade...). Esporte, famosos e figuras de linguagem ("chuva de críticas") caem fora. A função `/api/noticias` (Google/Bing) usa o mesmo filtro.
+- **Município**: cada notícia é ligada aos municípios citados no título/resumo (nomes repetidos só valem com a sigla do estado ou estado citado; palavras comuns em minúscula não contam).
+- **Outras instituições**: [GDACS](https://www.gdacs.org/) (ONU/UE: terremotos, ciclones, enchentes, secas e incêndios de grande porte que atingem o Brasil) e [USGS](https://earthquake.usgs.gov/) (terremotos no Brasil), mostrados no chip "Outros riscos".
+- O site mostra primeiro os feeds e completa com a busca do Google/Bing. Para desligar a busca, tire o `fetch("/api/noticias")` do `site/app.js` (função `pintaNoticias`) ou apague a pasta `functions/`.
+
+## Anúncios (Google AdSense)
+
+Tudo vem desligado. Para ligar, edite `ADS` em `site/config.js` (`cliente`, `slotDesk` 728×90 e `slotMovel` 320×50) e o ID em `site/ads.txt`. Para só ver o espaço, abra o site com `?ads=demo`.
+
+- Uma faixa fixa no rodapé, separada do mapa e dos botões (o CSS reserva o espaço, nada fica por baixo).
+- Banner de consentimento: nada do Google carrega antes da escolha. "Aceitar" = personalizados; "Sem personalização" = contextuais.
+- Páginas `sobre.html` e `privacidade.html` (revise o texto com quem cuida da parte jurídica antes de divulgar).
+
 ## Publicar (Cloudflare)
 
 O relay grava no R2 e o site lê dali.
@@ -120,6 +138,6 @@ PRs e ideias são bem-vindos: veja [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY
 
 ## Fontes e licenças
 
-- Avisos: [INMET](https://alertas2.inmet.gov.br/) · Focos: [INPE Queimadas](https://terrabrasilis.dpi.inpe.br/queimadas/portal/) · Malhas e nomes: [IBGE](https://www.ibge.gov.br/) · Notícias: Google Notícias (somente títulos e links).
+- Avisos: [INMET](https://alertas2.inmet.gov.br/) · Focos: [INPE Queimadas](https://terrabrasilis.dpi.inpe.br/queimadas/portal/) · Malhas e nomes: [IBGE](https://www.ibge.gov.br/) · Notícias: feeds de veículos e órgãos oficiais e buscas do Google/Bing Notícias (somente títulos e links) · Outros alertas: GDACS e USGS.
 - Detalhes de cada fonte e atribuição em [DADOS.md](DADOS.md).
 - Código sob licença MIT (`LICENSE`).

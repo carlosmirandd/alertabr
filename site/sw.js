@@ -2,8 +2,8 @@
    - arquivos do site e geometria: cache primeiro, atualiza em segundo plano (stale-while-revalidate)
    - estado.json (dados ao vivo, no R2 ou local): rede primeiro; sem rede, usa a última cópia
    - /api/*: sempre rede (notícias). Para forçar atualização geral, troque o número em VERSAO. */
-const VERSAO = "alertabr-v1";
-const BASICOS = ["./", "index.html", "style.css", "app.js", "mapa.js", "mapa-gl.js", "cartao.js", "config.js", "vendor/maplibre-gl.js", "vendor/maplibre-gl.css",
+const VERSAO = "alertabr-v2";
+const BASICOS = ["./", "index.html", "style.css", "app.js", "mapa.js", "mapa-gl.js", "cartao.js", "config.js", "ads.js", "sobre.html", "privacidade.html", "pagina.css", "data/noticias.json", "vendor/maplibre-gl.js", "vendor/maplibre-gl.css",
   "data/municipios.json", "data/estados.json", "data/estado.json", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/favicon.svg",
   "fonts/Open Sans Semibold/0-255.pbf", "fonts/Open Sans Semibold/256-511.pbf"];
 
@@ -24,7 +24,7 @@ async function cacheEAtualiza(req) {
 self.addEventListener("fetch", (e) => {
   const req = e.request; if (req.method !== "GET") return; const u = new URL(req.url);
   if (u.origin === location.origin && u.pathname.startsWith("/api/")) return;
-  if (/\/estado\.json$/.test(u.pathname)) { e.respondWith(redePrimeiro(req, 8000)); return; }
+  if (/\/(estado|noticias)\.json$/.test(u.pathname)) { e.respondWith(redePrimeiro(req, 8000)); return; }
   if (u.origin !== location.origin) return;
   if (req.mode === "navigate") { e.respondWith(redePrimeiro(req, 3500).catch(() => caches.match("index.html"))); return; }
   e.respondWith(cacheEAtualiza(req));
