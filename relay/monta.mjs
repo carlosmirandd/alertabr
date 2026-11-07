@@ -9,7 +9,7 @@ const IDX = new Map(GEO.c.map((c, i) => [c, i]));
 export const TOTAL = GEO.c.length;
 const ant = { inmet: null, inpe: null }; // último resultado bom de cada fonte: se uma cair, o site continua mostrando o que tinha
 
-export async function monta() {
+export async function monta(previo = null) {
   const fontes = {}, agora = Date.now();
   const [a, f] = await Promise.allSettled([inmet(), inpe(agora)]);
   if (a.status === "fulfilled") { ant.inmet = a.value; fontes.inmet = { ok: true, t: agora }; }
@@ -32,5 +32,11 @@ export async function monta() {
   let focos = 0;
   if (ant.inpe) for (const [cod, o] of ant.inpe.por) { const i = IDX.get(cod); if (i == null) continue; f24[i] = o.n; focos += o.n; if (o.frp) frp[i] = Math.round(o.frp); }
 
-  return { v: 1, gerado: agora, fontes, resumo: { focos, alertas: alertas.filter((x) => x.h === 0).length }, alertas, s, f: f24, frp, m };
+  const r = { v: 1, gerado: agora, fontes, resumo: { focos, alertas: alertas.filter((x) => x.h === 0).length }, alertas, s, f: f24, frp, m };
+  // Execução única (ex.: GitHub Actions) não guarda memória: se uma fonte caiu, reaproveita essa parte do arquivo anterior.
+  if (previo && previo.v === 1 && previo.s && previo.s.length === TOTAL) {
+    if (!ant.inmet) { r.alertas = previo.alertas; r.s = previo.s; r.m = previo.m; r.resumo.alertas = previo.resumo.alertas; fontes.inmet.reaproveitado = true; }
+    if (!ant.inpe) { r.f = previo.f; r.frp = previo.frp; r.resumo.focos = previo.resumo.focos; fontes.inpe.reaproveitado = true; }
+  }
+  return r;
 }

@@ -28,7 +28,9 @@ async function publica(corpo) {
 }
 
 async function ciclo() {
-  const c = await monta();
+  let previo = null;
+  if (UMA && process.env.PREVIO) { try { previo = await (await fetch(process.env.PREVIO, { signal: AbortSignal.timeout(15000) })).json(); } catch (e) { /* sem arquivo anterior */ } }
+  const c = await monta(previo);
   await publica(c);
   const f = c.fontes;
   console.log(`${hora()} ok | alertas hoje: ${c.resumo.alertas} | focos 24h: ${c.resumo.focos} | INMET ${f.inmet.ok ? "ok" : "FALHOU"} | INPE ${f.inpe.ok ? "ok" : "FALHOU"}${OUT ? " -> " + OUT : ""}`);
