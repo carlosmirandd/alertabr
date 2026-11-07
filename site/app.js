@@ -18,21 +18,32 @@
   const janela = (t) => { const m = /(\d{4})-(\d\d)-(\d\d) (\d\d:\d\d)/.exec(t || ""); return m ? m[3] + "/" + m[2] + " " + m[4] : t || ""; };
   const hora = (t) => new Date(t).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   const ha = (t) => { const m = Math.max(0, Math.round((Date.now() - t) / 60000)); return m < 1 ? "agora" : m < 60 ? "há " + m + " min" : m < 1440 ? "há " + Math.floor(m / 60) + " h" : "há " + Math.floor(m / 1440) + " d"; };
+  // "hoje", "amanhã" ou dd/mm, a partir do início do aviso
+  const diaTxt = (t) => { const m = /(\d{4})-(\d\d)-(\d\d)/.exec(t || ""); if (!m) return ""; const h = new Date(), d0 = new Date(h.getFullYear(), h.getMonth(), h.getDate()), dif = Math.round((new Date(+m[1], +m[2] - 1, +m[3]) - d0) / 86400000); return dif === 0 ? "hoje" : dif === 1 ? "amanhã" : m[3] + "/" + m[2]; };
 
-  let filtroSev = 0, pilSel = -1, ultimoCeu = "", G = null, E = null, mapa = null, D = null, camada = "alertas", sel = -1, aba = "agora", destaquePos = -1, fonteOk = 0, formato = "post", tema = "todos", timer = 0, semDados = true;
-  let membros = [], porNome = null;
-  const folha = () => matchMedia("(max-width:899px)").matches && !matchMedia("(max-height:520px) and (orientation:landscape)").matches; // painel em folha (celular/tablet em pé)
-  const CAPITAIS = new Set([1100205, 1200401, 1302603, 1400100, 1501402, 1600303, 1721000, 2111300, 2211001, 2304400, 2408102, 2507507, 2611606, 2704302, 2800308, 2927408, 3106200, 3205309, 3304557, 3550308, 4106902, 4205407, 4314902, 5002704, 5103403, 5208707, 5300108]); // capitais aparecem primeiro na busca
+  let filtroSev = 0, pilSel = -1, ultimoCeu = "", verFut = false, G = null, E = null, mapa = null, D = null, camada = "alertas", sel = -1, destaquePos = -1, fonteOk = 0, formato = "post", tema = "todos", timer = 0, semDados = true;
+  let membros = [], porNome = null, cartaoCv = null; const sujo = { n: true, c: true };
+  const DESK = "(min-width:1000px) and (min-height:560px)", desk = () => matchMedia(DESK).matches, folha = () => !desk(); // desktop: cartões soltos sobre o mapa; resto: cartões embaixo + folha
+  const CAPITAIS = new Set([1100205, 1200401, 1302603, 1400100, 1501402, 1600303, 1721000, 2111300, 2211001, 2304400, 2408102, 2507507, 2611606, 2704302, 2800308, 2927408, 3106200, 3205309, 3304557, 3550308, 4106902, 4205407, 4314902, 5002704, 5103403, 5208707, 5300108]); // capitais aparecem primeiro na busca e no mapa
+
+  // espaço livre para o mapa entre os cartões (o mapa em si ocupa a tela inteira)
+  function insets() {
+    const W = innerWidth, H = innerHeight, R = (s) => { const e = $(s); return e && e.offsetParent !== null ? e.getBoundingClientRect() : null; }, res = R("#resumo"), t = res ? res.bottom + 8 : 60;
+    if (desk()) { const e = R("#aba-agora"), d = R("#aba-noticias"); return { l: e ? e.right + 12 : 0, r: d ? W - d.left + 12 : 0, t, b: 40 }; }
+    const p = $("#painel").getBoundingClientRect(), c = R(".ceu"), l = R(".lista, .detalhe");
+    if (matchMedia("(max-height:559px) and (orientation:landscape)").matches) return { l: c ? c.right + 8 : 0, r: l ? W - l.left + 8 : 0, t, b: 8 };
+    return { l: 0, r: 0, t, b: $("#painel").classList.contains("alto") ? 0 : Math.max(0, H - p.top + 8) };
+  }
 
   // ---------- carregar ----------
   const json = (u, ms = 12000) => fetch(u, { signal: AbortSignal.timeout(ms) }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
   async function init() {
     try { [G, E] = await Promise.all([json("data/municipios.json", 30000), json("data/estados.json", 30000)]); }
     catch (e) { $("#carrega").textContent = "Não foi possível carregar o mapa. Recarregue a página."; return; }
-    lerCores(); mapa = new window.MapaBrasil($("#mapa"), G, E, { cor: corDe, aoClicar: aoClicar, aoPassar: aoPassar, insetBaixo: () => { if (!folha()) return 0; const m = $("#mapa").getBoundingClientRect(), p = $("#painel").getBoundingClientRect(); return Math.max(0, Math.round(m.bottom - p.top + 8)); } });
+    mapa = new window.MapaBrasil($("#mapa"), G, E, { cor: corDe, aoClicar: aoClicar, aoPassar: aoPassar, insets: insets });
     mapa.prio = new Set([...CAPITAIS].map((c) => G.c.indexOf(c)).filter((k) => k >= 0));
     $("#carrega").classList.add("ok"); legenda(); pintaAgora(); ligaUI();
-    const h = /#m=(\d{7})/.exec(location.hash); await atualiza(true);
+    const h = /#m=(\d{7})/.exec(location.hash); await atualiza(true); mapa.refit();
     if (h) { const i = G.c.indexOf(+h[1]); if (i >= 0) seleciona(i); }
     ciclo();
   }
@@ -47,7 +58,7 @@
         fonteOk = (fonteOk + k) % urls.length;
         // um arquivo local mais velho que o que já temos não substitui os dados
         if (D && j.gerado <= D.gerado) { status(); return; }
-        D = j; semDados = false; montaMembros(); mapa.setCor(corDe, true); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null); legenda(); pintaHero(); pintaAgora(); if (aba === "cartao") pintaCartao(); status(); return;
+        D = j; semDados = false; montaMembros(); mapa.setCor(corDe, true); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null); legenda(); pintaHero(); pintaAgora(); pintaCartao(); if (sujo.n) pintaNoticias(); status(); return;
       } catch (e) { /* tenta a próxima fonte */ }
     }
     if (primeira || semDados) status("erro");
@@ -67,18 +78,20 @@
   }
   setInterval(() => { if (D && !document.hidden) status(); }, 30000);
 
-  // ---------- título grande e filtros de gravidade ----------
+  // ---------- números grandes (que também filtram o mapa) ----------
   function pintaHero() {
     if (!D) return; const r = resumoBr(), tot = G.c.length, soma = r.sev[1] + r.sev[2] + r.sev[3];
-    $("#n0").textContent = fmt(soma); $("#n1").textContent = fmt(r.sev[1]); $("#n2").textContent = fmt(r.sev[2]); $("#n3").textContent = fmt(r.sev[3]);
-    document.querySelectorAll("[data-sev]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.sev === filtroSev)));
+    $("#n3").textContent = fmt(r.sev[3]); $("#n2").textContent = fmt(r.sev[2]); $("#n1").textContent = fmt(r.sev[1]); $("#nF").textContent = fmt(r.focos);
+    $("#bb3").style.width = (r.sev[3] / tot * 100) + "%"; $("#bb2").style.width = (r.sev[2] / tot * 100) + "%"; $("#bb1").style.width = (r.sev[1] / tot * 100) + "%";
+    document.querySelectorAll("#filtros [data-sev]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.sev === filtroSev && camada === "alertas")));
+    $("#filtros [data-camada]").setAttribute("aria-pressed", String(camada === "focos"));
     if (sel >= 0) {
       const al = alertasDe(sel).filter((x) => x.h === 0), foc = D.f[sel];
       $("#hTitulo").textContent = G.n[sel] + " · " + ufDe(sel);
       $("#hSub").innerHTML = `<b>${al.length}</b> aviso${al.length === 1 ? "" : "s"} do INMET hoje · <b>${fmt(foc)}</b> foco${foc === 1 ? "" : "s"} de calor nas últimas 24 h`;
     } else {
       $("#hTitulo").textContent = "Brasil agora";
-      $("#hSub").innerHTML = `<b>${fmt(soma)}</b> municípios (${(soma / tot * 100).toFixed(1).replace(".", ",")} %) com aviso do INMET hoje · <b>${fmt(r.focos)}</b> focos de calor nas últimas 24 h`;
+      $("#hSub").innerHTML = `<b>${fmt(soma)}</b> municípios (${(soma / tot * 100).toFixed(1).replace(".", ",")} %) com aviso do INMET hoje · <b>${fmt(r.focos)}</b> focos de calor em 24 h`;
     }
   }
 
@@ -108,13 +121,13 @@
     tip.style.left = Math.max(6, Math.min(px + 14, m.clientWidth - w - 6)) + "px"; tip.style.top = Math.max(6, py + hh + 24 > m.clientHeight ? py - hh - 12 : py + 14) + "px";
   }
   function seleciona(i, semZoom) {
-    sel = i; destaquePos = -1; pilSel = -1; mapa.setDestaque(null); mapa.setSel(i);
-    if (i >= 0) { if (folha()) painelAltura("meio"); history.replaceState(null, "", "#m=" + G.c[i]); if (!semZoom) setTimeout(() => mapa.zoomPara(i), folha() ? 320 : 0); } else history.replaceState(null, "", location.pathname);
-    $("#q").value = i >= 0 ? G.n[i] : ""; mudaAba("agora"); pintaHero(); pintaAgora(); if (aba === "noticias") pintaNoticias(); if (aba === "cartao") pintaCartao();
+    sel = i; destaquePos = -1; pilSel = -1; verFut = false; mapa.setDestaque(null); mapa.setSel(i);
+    if (i >= 0) { if (folha() && $("#painel").classList.contains("alto")) painelAltura("meio"); history.replaceState(null, "", "#m=" + G.c[i]); if (!semZoom) mapa.zoomPara(i); } else history.replaceState(null, "", location.pathname);
+    $("#q").value = i >= 0 ? G.n[i] : ""; pintaHero(); pintaAgora(); pintaNoticias(); pintaCartao();
   }
   function alertasDe(i) { return D && D.m[i] ? D.m[i].map((p) => D.alertas[p]).filter(Boolean) : []; }
 
-  // ---------- aba Agora ----------
+  // ---------- cartões da esquerda: céu animado + lista ----------
   function resumoBr() {
     const c = { 1: 0, 2: 0, 3: 0 }; for (const s of D.s) if (s) c[s]++;
     const top = []; for (let i = 0; i < D.f.length; i++) if (D.f[i] > 0) top.push(i); top.sort((a, b) => D.f[b] - D.f[a]);
@@ -177,16 +190,28 @@
   const horaTxt = () => new Date(D.gerado).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   function pintaAgora() {
     const el = $("#aba-agora"); if (!D) { el.innerHTML = '<p class="vazio esq">Buscando os dados mais recentes…</p>'; return; }
-    const rolagem = el.scrollTop;
     el.innerHTML = sel >= 0 ? municipio(sel) : brasil();
-    el.scrollTop = rolagem;
+    requestAnimationFrame(cabeLista);
   }
+  // a lista nunca rola: mostra as linhas que cabem e resume o resto
+  function cabeLista() {
+    const l = $("#aba-agora .lista"); if (!l) return; l.querySelectorAll(".mais-n").forEach((e) => e.remove());
+    const rows = [...l.querySelectorAll(".rw")]; rows.forEach((r) => { r.hidden = false; }); if (!l.clientHeight) return;
+    const lim = l.clientHeight - 34; let n = 0;
+    for (const r of rows) if (r.offsetTop + r.offsetHeight > lim) { r.hidden = true; n++; }
+    if (n) { const d = document.createElement("div"); d.className = "mais-n"; d.textContent = "+ " + n + " no painel completo (Ver tudo)"; if (desk()) d.textContent = "+ " + n + " — toque no mapa para ver por cidade"; l.appendChild(d); }
+  }
+  function cabeNoticias() { // no desktop as notícias não rolam: entram as que cabem
+    const el = $("#aba-noticias"); if (!el || !desk()) return; const it = [...el.querySelectorAll(".not")]; it.forEach((n) => { n.hidden = false; }); if (!el.clientHeight) return;
+    const lim = el.clientHeight - 12; for (const n of it) if (n.offsetTop + n.offsetHeight > lim) n.hidden = true;
+  }
+  let tr = 0; addEventListener("resize", () => { clearTimeout(tr); tr = setTimeout(() => { cabeLista(); cabeNoticias(); }, 120); });
+  const linhaAviso = ([a, p]) => `<div class="rw${p === destaquePos ? " on" : ""}" style="--c:${esc(a.cor)}" data-alerta="${p}" tabindex="0" role="button"><i></i><span>${esc(a.t)}<small>${NOME_SEV[a.sev] || ""} · ${esc(a.uf)}</small></span><b>${fmt(a.n)}</b></div>`;
   function brasil() {
     const r = resumoBr(), tot = G.c.length, soma = r.sev[1] + r.sev[2] + r.sev[3];
-    const hoje = D.alertas.map((a, p) => [a, p]).filter(([a]) => a.h === 0), fut = D.alertas.map((a, p) => [a, p]).filter(([a]) => a.h === 1);
+    const todos = D.alertas.map((a, p) => [a, p]), hoje = todos.filter(([a]) => a.h === 0), fut = todos.filter(([a]) => a.h === 1);
     const topo = destaquePos >= 0 ? D.alertas[destaquePos] : (hoje[0] && hoje[0][0]);
     const tipo = camada === "focos" ? "fogo" : topo ? tipoCeu(topo) : "limpo";
-    const card = ([a, p]) => `<div class="card${p === destaquePos ? " on" : ""}" style="--c:${esc(a.cor)}" data-alerta="${p}" tabindex="0" role="button"><h4><span>${esc(a.t)}</span><small>${fmt(a.n)} municípios</small></h4><p><span class="tag">${NOME_SEV[a.sev] || ""}</span>${esc(a.uf)}</p></div>`;
     const c = ceu({
       chave: "br|" + tipo + "|" + destaquePos + "|" + camada, tipo, aria: "Resumo do Brasil", local: "Brasil", hora: horaTxt(),
       gr: camada === "focos" ? fmt(r.focos) : (soma / tot * 100).toFixed(1).replace(".", ","), unid: camada === "focos" ? "" : "%",
@@ -194,95 +219,109 @@
       blocos: [["Grande", fmt(r.sev[3])], ["Perigo", fmt(r.sev[2])], ["Focos 24h", fmt(r.focos)]],
       pils: hoje.map(([a, p]) => ({ a, pos: p, on: p === destaquePos, txt: fmt(a.n) })),
     });
-    return c + `<h3>Avisos de hoje (${hoje.length})</h3>${hoje.length ? hoje.map(card).join("") : '<p class="vazio">Nenhum aviso ativo hoje.</p>'}
-      ${fut.length ? `<h3>Próximos dias (${fut.length})</h3>` + fut.map(card).join("") : ""}
-      <h3>Municípios com mais focos (24 h)</h3>${r.top.length ? '<ul class="top">' + r.top.map((t) => `<li data-cid="${t.i}"><span>${esc(t.nome)} · ${t.uf}</span><b>${fmt(t.n)}</b></li>`).join("") + "</ul>" : '<p class="vazio">Sem focos registrados.</p>'}
-      <div class="fila"><button class="btn sec" data-ir="cartao">Cartão do Brasil</button></div>`;
+    const lista = camada === "focos"
+      ? `<section class="lista"><h3>Municípios com mais focos (24 h)</h3>${r.top.length ? r.top.map((t) => `<div class="rw" style="--c:var(--fogo)" data-cid="${t.i}" tabindex="0" role="button"><i></i><span>${esc(t.nome)}<small>${t.uf}</small></span><b>${fmt(t.n)}</b></div>`).join("") : '<p class="vazio">Sem focos registrados.</p>'}</section>`
+      : `<section class="lista"><h3>Avisos de hoje (${hoje.length})</h3>${hoje.length ? hoje.map(linhaAviso).join("") : '<p class="vazio">Nenhum aviso ativo hoje.</p>'}${fut.length ? (verFut ? `<h3 style="margin-top:10px">Próximos dias (${fut.length})</h3>` + fut.map(linhaAviso).join("") : `<button type="button" class="mais" data-fut="1">+ ${fut.length} nos próximos dias</button>`) : ""}</section>`;
+    return c + lista;
   }
   function municipio(i) {
-    const pos = (D.m[i] || []).slice().sort((x, y) => D.alertas[y].sev - D.alertas[x].sev || D.alertas[x].h - D.alertas[y].h);
+    // avisos de HOJE vêm primeiro; dentro de cada dia, o mais grave
+    const pos = (D.m[i] || []).slice().sort((x, y) => D.alertas[x].h - D.alertas[y].h || D.alertas[y].sev - D.alertas[x].sev);
     const ativoPos = pos.includes(pilSel) ? pilSel : pos[0], at = ativoPos != null ? D.alertas[ativoPos] : null, foc = D.f[i], hojeN = pos.filter((p) => D.alertas[p].h === 0).length;
+    const comFoco = camada === "focos" || !at;
     const tipo = camada === "focos" && foc > 0 ? "fogo" : at ? tipoCeu(at) : foc > 0 ? "fogo" : "limpo";
     const c = ceu({
       chave: "m|" + i + "|" + tipo + "|" + ativoPos + "|" + camada, tipo, aria: "Situação em " + G.n[i], local: G.n[i] + " · " + ufDe(i), hora: horaTxt(),
-      gr: camada === "focos" || (!at && foc > 0) ? fmt(foc) : String(hojeN), unid: camada === "focos" || (!at && foc > 0) ? (foc === 1 ? "foco" : "focos") : hojeN === 1 ? "aviso" : "avisos",
-      palavra: at ? at.t : foc > 0 ? "Focos de calor" : "Sem aviso hoje", sub: at ? (at.h ? "previsto para os próximos dias" : NOME_SEV[at.sev]) : foc > 0 ? "detecções de satélite em 24 h" : "nenhum aviso do INMET ativo",
+      gr: comFoco && foc > 0 ? fmt(foc) : String(hojeN), unid: comFoco && foc > 0 ? (foc === 1 ? "foco" : "focos") : hojeN === 1 ? "aviso" : "avisos",
+      palavra: at ? at.t : foc > 0 ? "Focos de calor" : "Sem aviso hoje", sub: at ? (at.h ? "previsto para " + diaTxt(at.ini) : NOME_SEV[at.sev]) : foc > 0 ? "detecções de satélite em 24 h" : "nenhum aviso do INMET ativo",
       blocos: [["Gravidade", at ? SEV_CURTO[at.sev] : "–"], ["Focos 24h", fmt(foc)], ["Potência", D.frp[i] ? fmt(D.frp[i]) + " <small>MW</small>" : "–"]],
-      pils: pos.map((p) => ({ a: D.alertas[p], pos: p, on: p === ativoPos, txt: D.alertas[p].h ? "em breve" : SEV_CURTO[D.alertas[p].sev] })),
+      pils: pos.map((p) => ({ a: D.alertas[p], pos: p, on: p === ativoPos, txt: D.alertas[p].h ? diaTxt(D.alertas[p].ini) : SEV_CURTO[D.alertas[p].sev] })),
     });
-    const det = at ? `<div class="card" style="--c:${esc(at.cor)};cursor:default"><h4><span>${esc(at.t)}</span><small>${at.h ? "em breve" : "hoje"}</small></h4><p><span class="tag">${NOME_SEV[at.sev] || ""}</span>${janela(at.ini)} → ${janela(at.fim)}</p>${at.r[0] ? `<p>${esc(at.r[0])}</p>` : ""}${at.i.length ? `<div class="instr"><b>O que fazer:</b> ${esc(at.i.slice(0, 2).join(" "))}</div>` : ""}</div>` : '<p class="vazio">Nenhum aviso do INMET ativo para este município.</p>';
-    return c + det + `<div class="fila"><button class="btn" data-ir="cartao">Gerar cartão</button><button class="btn sec" data-ir="noticias">Ver notícias</button><button class="btn sec" data-limpa="1">Voltar ao Brasil</button></div>`;
+    const det = at ? `<div class="card" style="--c:${esc(at.cor)}"><h4><span>${esc(at.t)}</span><small>${at.h ? diaTxt(at.ini) : "hoje"}</small></h4><p><span class="tag">${NOME_SEV[at.sev] || ""}</span>${janela(at.ini)} → ${janela(at.fim)}</p>${at.r[0] ? `<p class="clamp3">${esc(at.r[0])}</p>` : ""}${at.i.length ? `<div class="instr"><b>O que fazer:</b> <span class="clamp2">${esc(at.i.slice(0, 2).join(" "))}</span></div>` : ""}</div>` : '<p class="vazio">Nenhum aviso do INMET ativo para este município.</p>';
+    return c + `<section class="detalhe">${det}<div class="fila"><button class="btn" data-ir="cartao">Gerar cartão</button><button class="btn sec" data-ir="noticias">Notícias</button><button class="btn sec" data-limpa="1">Brasil</button></div></section>`;
   }
 
-  // ---------- aba Notícias ----------
+  // ---------- cartão da direita: notícias ----------
   const TEMAS = { todos: '(chuva OR alagamento OR queimada OR incêndio OR "Defesa Civil" OR temporal OR seca)', chuva: "(chuva OR alagamento OR enchente OR temporal OR deslizamento)", fogo: '(queimada OR incêndio OR "foco de calor" OR fumaça)', calor: '("onda de calor" OR seca OR "baixa umidade" OR calor)' };
-  const cacheN = new Map();
+  const cacheN = new Map(), tabletCards = () => matchMedia("(min-width:600px) and (max-width:999px) and (min-height:560px)").matches, secundariaVisivel = () => desk() || $("#painel").classList.contains("alto"), noticiasVisivel = () => secundariaVisivel() || tabletCards();
   function pintaNoticias() {
+    if (!noticiasVisivel()) { sujo.n = true; return; } sujo.n = false;
     const el = $("#aba-noticias"), local = sel >= 0;
-    el.innerHTML = `<h2>${local ? "Notícias · " + esc(G.n[sel]) : "Notícias · Brasil"}</h2><div class="chips">${[["todos", "Tudo"], ["chuva", "Chuva e alagamento"], ["fogo", "Queimadas"], ["calor", "Calor e seca"]].map(([k, n]) => `<button data-tema="${k}" aria-pressed="${tema === k}">${n}</button>`).join("")}</div><div id="listaN"><p class="vazio esq">Buscando notícias…</p></div>`;
+    el.innerHTML = `<h3>${local ? "Notícias · " + esc(G.n[sel]) : "Notícias · Brasil"}</h3><div class="chips">${[["todos", "Tudo"], ["chuva", "Chuva"], ["fogo", "Queimadas"], ["calor", "Calor e seca"]].map(([k, n]) => `<button data-tema="${k}" aria-pressed="${tema === k}">${n}</button>`).join("")}</div><div id="listaN"><p class="vazio esq">Buscando notícias…</p></div>`;
     const q = (local ? `"${G.n[sel]}" ${ufDe(sel)} ` : "") + TEMAS[tema];
-    const mostra = (j) => { const L = $("#listaN"); if (!L || el.hidden) return; L.innerHTML = j.itens && j.itens.length ? j.itens.map((n) => `<a class="not" href="${esc(n.u)}" target="_blank" rel="noopener noreferrer"><b>${esc(n.t)}</b><small>${esc(n.f || "")}${n.d ? " · " + ha(n.d) : ""}${n.n > 1 ? " · " + n.n + " fontes" : ""}</small></a>`).join("") : '<p class="vazio">Nenhuma notícia recente encontrada' + (j.erro ? " (fonte indisponível agora)" : "") + ".</p>"; };
+    const mostra = (j) => { const L = $("#listaN"); if (!L || q !== (sel >= 0 ? `"${G.n[sel]}" ${ufDe(sel)} ` : "") + TEMAS[tema]) return; L.innerHTML = j.itens && j.itens.length ? j.itens.slice(0, 7).map((n) => `<a class="not" href="${esc(n.u)}" target="_blank" rel="noopener noreferrer"><b>${esc(n.t)}</b><small>${esc(n.f || "")}${n.d ? " · " + ha(n.d) : ""}${n.n > 1 ? " · " + n.n + " fontes" : ""}</small></a>`).join("") : '<p class="vazio">Nenhuma notícia recente encontrada' + (j.erro ? " (fonte indisponível agora)" : "") + ".</p>"; cabeNoticias(); };
     const c = cacheN.get(q); if (c && Date.now() - c.t < 600000) { mostra(c.j); return; }
     json("/api/noticias?q=" + encodeURIComponent(q), 15000).then((j) => { cacheN.set(q, { t: Date.now(), j }); if (cacheN.size > 40) cacheN.delete(cacheN.keys().next().value); mostra(j); }).catch(() => mostra({ itens: [], erro: 1 }));
   }
 
-  // ---------- aba Cartão ----------
+  // ---------- cartão da direita: imagem para compartilhar ----------
   function dadosCartao() {
     if (sel < 0) { const r = resumoBr(); return { formato, nacional: r, gerado: D.gerado }; }
     const al = alertasDe(sel).filter((a) => a.h === 0).sort((a, b) => b.sev - a.sev)[0], foc = D.f[sel];
     if (!al && !foc) return null;
     return { formato, nome: G.n[sel], uf: ufDe(sel), alerta: al || null, focos: foc, forma: mapa.forma(sel), gerado: D.gerado };
   }
-  let cartaoCv = null;
   function pintaCartao() {
-    const el = $("#aba-cartao"); if (!D) return;
-    const d = dadosCartao();
-    el.innerHTML = `<h2>Cartão para compartilhar</h2><p class="sub">${sel >= 0 ? esc(G.n[sel]) : "Resumo do Brasil"} · imagem pronta para WhatsApp e redes.</p>
+    if (!D) return; if (!secundariaVisivel()) { sujo.c = true; return; } sujo.c = false;
+    const el = $("#aba-cartao"), d = dadosCartao();
+    el.innerHTML = `<h3>Cartão para compartilhar · ${sel >= 0 ? esc(G.n[sel]) : "Brasil"}</h3>
       <div class="chips"><button data-fmt="post" aria-pressed="${formato === "post"}">Post 1:1</button><button data-fmt="stories" aria-pressed="${formato === "stories"}">Stories 9:16</button></div>
-      ${d ? '<div id="prev"></div><div class="fila"><button class="btn" data-baixa="1">Baixar PNG</button><button class="btn sec" data-comp="1">Compartilhar</button></div>' : '<p class="vazio">Este município não tem aviso nem foco de calor agora, então não há o que divulgar. Escolha outro ou volte ao Brasil.</p>'}`;
+      ${d ? '<div class="cartao-l"><div id="prev"></div><div class="acoes"><button class="btn" data-baixa="1">Baixar PNG</button><button class="btn sec" data-comp="1">Compartilhar</button></div></div>' : '<p class="vazio">Sem aviso nem foco de calor neste município agora, então não há o que divulgar.</p>'}`;
     if (!d) { cartaoCv = null; return; }
     cartaoCv = window.Cartao.gera(d); const img = new Image(); img.className = "previa"; img.alt = "Prévia do cartão"; img.src = cartaoCv.toDataURL("image/jpeg", 0.85); $("#prev").appendChild(img);
   }
   const nomeArq = () => "alertabr-" + (sel >= 0 ? norm(G.n[sel]).replace(/[^a-z0-9]+/g, "-") : "brasil") + "-" + formato + ".png";
 
   // ---------- UI ----------
-  function mudaAba(a) {
-    aba = a; document.querySelectorAll(".nav [data-aba]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.aba === a)));
-    for (const k of ["agora", "noticias", "cartao"]) $("#aba-" + k).hidden = k !== a;
-    if (a === "noticias") pintaNoticias(); if (a === "cartao") pintaCartao();
+  function painelAltura(h) { // celular/tablet: cartões embaixo (meio) ou folha com tudo (alto)
+    const p = $("#painel"); p.classList.remove("baixo", "alto"); if (h === "alto") p.classList.add("alto");
+    $("#gripTxt").textContent = h === "alto" ? "Recolher" : "Ver tudo";
+    document.body.classList.toggle("folha-alta", h === "alto");
+    if (h === "alto") { if (sujo.n) pintaNoticias(); if (sujo.c) pintaCartao(); }
+    if (mapa) setTimeout(() => mapa.refit && mapa.fitBrasil && mapa.refit(), 0);
   }
-  function painelAltura(h) { const p = $("#painel"); p.classList.remove("baixo", "alto"); if (h === "baixo") p.classList.add("baixo"); if (h === "alto") p.classList.add("alto"); }
+  function irPara(a) { // botões "Gerar cartão" e "Notícias"
+    if (desk()) return; painelAltura("alto"); setTimeout(() => { const e = $("#aba-" + a); if (e) e.scrollIntoView({ behavior: "smooth", block: "start" }); }, 60);
+  }
   function ligaUI() {
-    document.querySelectorAll(".nav [data-aba]").forEach((b) => b.addEventListener("click", () => { mudaAba(b.dataset.aba); if (folha() && $("#painel").classList.contains("baixo")) painelAltura("meio"); }));
-    $("#filtros").addEventListener("click", (e) => { const b = e.target.closest("[data-sev]"); if (!b) return; const n = +b.dataset.sev; filtroSev = n === filtroSev ? 0 : n; if (filtroSev) setCamada("alertas"); pintaHero(); mapa.setCor(corDe, true); });
-    $("#tema").addEventListener("click", alternaTema); atualizaIconeTema();
-    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (!document.documentElement.dataset.tema) recolore(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "/" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) { e.preventDefault(); $("#q").focus(); } });
-    $("#grip").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } });
-    const compacto = matchMedia("(max-width:599px)"), poeCamadas = () => { const c = $(".camadas"), alvo = compacto.matches ? $("#mapa") : $("#filtros"); if (c.parentElement !== alvo) alvo.appendChild(c); };
-    compacto.addEventListener("change", poeCamadas); poeCamadas();
+    $("#filtros").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-sev],[data-camada]"); if (!b) return;
+      if (b.dataset.camada) { setCamada(camada === "focos" ? "alertas" : "focos"); return; }
+      const n = +b.dataset.sev; filtroSev = n === filtroSev ? 0 : n; setCamada("alertas"); pintaHero(); mapa.setCor(corDe, true);
+    });
     $("#c-alertas").addEventListener("click", () => setCamada("alertas")); $("#c-focos").addEventListener("click", () => setCamada("focos"));
     $("#zMais").addEventListener("click", () => mapa.zoomMais(1.6, mapa.w / 2, mapa.h / 2, true)); $("#zMenos").addEventListener("click", () => mapa.zoomMais(1 / 1.6, mapa.w / 2, mapa.h / 2, true));
     $("#zBr").addEventListener("click", () => { destaquePos = -1; mapa.setDestaque(null); seleciona(-1); mapa.resetar(); pintaAgora(); });
-    $("#grip").addEventListener("click", () => { const p = $("#painel"); painelAltura(p.classList.contains("baixo") ? "meio" : p.classList.contains("alto") ? "baixo" : "alto"); });
+    $("#grip").addEventListener("click", () => painelAltura($("#painel").classList.contains("alto") ? "meio" : "alto"));
+    $("#tema").addEventListener("click", alternaTema); atualizaIconeTema();
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (!document.documentElement.dataset.tema) recolore(); });
+    matchMedia(DESK).addEventListener("change", () => { painelAltura("meio"); pintaAgora(); pintaNoticias(); pintaCartao(); mapa.refit(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "/" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) { e.preventDefault(); abreBusca(); } });
+    $("#buscaIc").addEventListener("click", abreBusca);
     $("#painel").addEventListener("click", (e) => {
-      const t = e.target.closest("[data-pil],[data-alerta],[data-cid],[data-ir],[data-limpa],[data-tema],[data-fmt],[data-baixa],[data-comp]"); if (!t) return; const d = t.dataset;
+      const t = e.target.closest("[data-pil],[data-alerta],[data-cid],[data-ir],[data-limpa],[data-tema],[data-fmt],[data-baixa],[data-comp],[data-fut]"); if (!t) return; const d = t.dataset;
       if (d.pil != null) { const p = +d.pil; if (sel >= 0) { pilSel = p; pintaAgora(); } else { destaquePos = destaquePos === p ? -1 : p; mapa.setDestaque(destaquePos >= 0 ? membros[p] : null); if (destaquePos >= 0) { setCamada("alertas"); mapa.zoomLista([...membros[p]]); } pintaAgora(); } }
-      else if (d.alerta != null) { const p = +d.alerta; destaquePos = destaquePos === p ? -1 : p; mapa.setDestaque(destaquePos >= 0 ? membros[p] : null); if (destaquePos >= 0) { setCamada("alertas"); mapa.zoomLista([...membros[p]]); } pintaAgora(); }
-      else if (d.cid != null) { setCamada("focos"); seleciona(+d.cid); }
-      else if (d.ir) mudaAba(d.ir); else if (d.limpa) { seleciona(-1); mapa.resetar(); }
+      else if (d.alerta != null) { const p = +d.alerta; destaquePos = destaquePos === p ? -1 : p; mapa.setDestaque(destaquePos >= 0 ? membros[p] : null); if (destaquePos >= 0) { setCamada("alertas"); mapa.zoomLista([...membros[p]]); if (folha()) painelAltura("meio"); } pintaAgora(); }
+      else if (d.cid != null) { seleciona(+d.cid); }
+      else if (d.fut) { verFut = true; pintaAgora(); }
+      else if (d.ir) irPara(d.ir); else if (d.limpa) { seleciona(-1); mapa.resetar(); }
       else if (d.tema) { tema = d.tema; pintaNoticias(); } else if (d.fmt) { formato = d.fmt; pintaCartao(); }
       else if (d.baixa && cartaoCv) window.Cartao.baixa(cartaoCv, nomeArq());
       else if (d.comp && cartaoCv) window.Cartao.compartilha(cartaoCv, nomeArq(), (sel >= 0 ? G.n[sel] + ": " : "") + "alertas e focos de calor em tempo real").then((ok) => { if (!ok) window.Cartao.baixa(cartaoCv, nomeArq()); });
     });
-    $("#painel").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.dataset.alerta != null) { e.preventDefault(); e.target.click(); } });
+    $("#painel").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && (e.target.dataset.alerta != null || e.target.dataset.cid != null)) { e.preventDefault(); e.target.click(); } });
     busca();
   }
-  function setCamada(c) { if (camada === c) return; camada = c; $("#c-alertas").setAttribute("aria-selected", c === "alertas"); $("#c-focos").setAttribute("aria-selected", c === "focos"); legenda(); mapa.setCor(corDe, true); if (D) pintaAgora(); }
+  function abreBusca() { $("#barra").classList.add("buscando"); $("#q").focus(); $("#q").select(); }
+  function setCamada(c) {
+    if (camada === c) { pintaHero(); return; }
+    camada = c; $("#c-alertas").setAttribute("aria-selected", c === "alertas"); $("#c-focos").setAttribute("aria-selected", c === "focos");
+    legenda(); mapa.setCor(corDe, true); if (D) { pintaHero(); pintaAgora(); }
+  }
   // ---------- tema claro/escuro ----------
   const escuroAgora = () => { const t = document.documentElement.dataset.tema; return t ? t === "escuro" : matchMedia("(prefers-color-scheme: dark)").matches; };
   function atualizaIconeTema() { $("#temaIc use").setAttribute("href", escuroAgora() ? "#i-sol" : "#i-lua"); }
-  function recolore() { lerCores(); atualizaIconeTema(); legenda(); if (mapa) mapa.setCor(corDe); if (aba === "cartao" && D) pintaCartao(); }
+  function recolore() { lerCores(); atualizaIconeTema(); legenda(); if (mapa) mapa.setCor(corDe); if (D) pintaCartao(); }
   function alternaTema() {
     const novo = escuroAgora() ? "claro" : "escuro"; document.documentElement.dataset.tema = novo;
     try { localStorage.setItem("alertabr-tema", novo); } catch (e) { /* sem armazenamento: vale só nesta visita */ }
@@ -292,7 +331,7 @@
   // ---------- busca ----------
   function busca() {
     const inp = $("#q"), ul = $("#sug"); let achados = [], pos = -1, tb = 0;
-    const fecha = () => { ul.hidden = true; inp.setAttribute("aria-expanded", "false"); pos = -1; };
+    const fecha = () => { ul.hidden = true; inp.setAttribute("aria-expanded", "false"); pos = -1; }, fim = () => { fecha(); $("#barra").classList.remove("buscando"); };
     const pinta = () => { ul.innerHTML = achados.map((i, k) => `<li role="option" data-i="${i}" aria-selected="${k === pos}">${esc(G.n[i])}<small>${ufDe(i)}</small></li>`).join(""); ul.hidden = !achados.length; inp.setAttribute("aria-expanded", String(!!achados.length)); };
     inp.addEventListener("input", () => { clearTimeout(tb); tb = setTimeout(() => {
       const v = norm(inp.value).trim(); if (v.length < 2) { achados = []; fecha(); return; }
@@ -302,10 +341,10 @@
       achados = a.concat(b).slice(0, 8); pos = -1; pinta(); }, 80); });
     inp.addEventListener("keydown", (e) => {
       if (e.key === "ArrowDown") { pos = Math.min(achados.length - 1, pos + 1); pinta(); e.preventDefault(); } else if (e.key === "ArrowUp") { pos = Math.max(0, pos - 1); pinta(); e.preventDefault(); }
-      else if (e.key === "Enter" && achados.length) { seleciona(achados[pos < 0 ? 0 : pos]); fecha(); inp.blur(); } else if (e.key === "Escape") fecha();
+      else if (e.key === "Enter" && achados.length) { seleciona(achados[pos < 0 ? 0 : pos]); fim(); inp.blur(); } else if (e.key === "Escape") { fim(); inp.blur(); }
     });
-    ul.addEventListener("mousedown", (e) => { const li = e.target.closest("li"); if (li) { e.preventDefault(); seleciona(+li.dataset.i); fecha(); inp.blur(); } });
-    inp.addEventListener("blur", () => setTimeout(fecha, 120));
+    ul.addEventListener("mousedown", (e) => { const li = e.target.closest("li"); if (li) { e.preventDefault(); seleciona(+li.dataset.i); fim(); inp.blur(); } });
+    inp.addEventListener("blur", () => setTimeout(fim, 150));
   }
   window.alertabr = { get mapa() { return mapa; } }; // gancho para depuração/medição
   init();
