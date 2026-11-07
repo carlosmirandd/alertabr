@@ -31,19 +31,22 @@
       this.cvp = document.createElement("canvas"); this.cvp.className = "mapa-cv mapa-prev"; this.cv = document.createElement("canvas"); this.cv.className = "mapa-cv"; this.cvt = document.createElement("canvas"); this.cvt.className = "mapa-cv mapa-topo";
       el.append(this.cvp, this.cv, this.cvt); this.cxp = this.cvp.getContext("2d"); this.cxt = this.cvt.getContext("2d"); this.fade = false; this.qt = 0;
       this.cx = this.cv.getContext("2d", { alpha: true }); this.hc = document.createElement("canvas").getContext("2d"); // contexto só para testar cliques (transformação neutra)
-      this.ro = new ResizeObserver(() => { this.medir(); this.ajusta(); this.desenhaJa(); }); this.ro.observe(el);
+      this.fitBrasil = true; this.ro = new ResizeObserver(() => { this.medir(); if (this.fitBrasil) this.resetar(true); else this.ajusta(); this.desenhaJa(); }); this.ro.observe(el);
       this.medir(); this.resetar(true); this.gestos(); this.desenhaJa();
     }
     medir() { const r = this.el.getBoundingClientRect(); this.w = Math.max(1, r.width); this.h = Math.max(1, r.height); }
-    // visão = {x,y} canto superior esquerdo em unidades do mapa, k = pixels por unidade
-    kMin() { return Math.min(this.w / this.W, this.h / this.H); }
-    ajusta() { const v = this.v, km = this.kMin(); v.k = Math.max(km, Math.min(km * 90, v.k)); const mw = this.w / v.k, mh = this.h / v.k;
-      v.x = mw >= this.W ? (this.W - mw) / 2 : Math.max(0, Math.min(this.W - mw, v.x));
-      v.y = mh >= this.H ? (this.H - mh) / 2 : Math.max(0, Math.min(this.H - mh, v.y)); }
-    resetar(sem) { if (sem) { this.v.k = this.kMin(); this.v.x = 0; this.v.y = 0; this.ajusta(); return; } this.vaiPara(0, 0, this.kMin()); }
+    // visão = {x,y} canto superior esquerdo em unidades do mapa, k = pixels por unidade.
+    // O mapa ocupa a tela toda; "area" é o espaço livre entre os cartões flutuantes (insets vêm da página).
+    area() { const i = this.op.insets ? this.op.insets() : null, l = i ? i.l : 0, r = i ? i.r : 0, t = i ? i.t : 0, b = i ? i.b : 0; return { l, t, w: Math.max(120, this.w - l - r), h: Math.max(120, this.h - t - b) }; }
+    kMin() { const a = this.area(); return Math.min(a.w / this.W, a.h / this.H); }
+    ajusta() { const v = this.v, km = this.kMin(); v.k = Math.max(km, Math.min(km * 90, v.k)); const cx = v.x + this.w / (2 * v.k), cy = v.y + this.h / (2 * v.k), mx = this.W * 0.2, my = this.H * 0.2;
+      v.x = Math.max(-mx, Math.min(this.W + mx, cx)) - this.w / (2 * v.k); v.y = Math.max(-my, Math.min(this.H + my, cy)) - this.h / (2 * v.k); }
+    visaoBrasil() { const a = this.area(), k = this.kMin(); return { k, x: this.W / 2 - (a.l + a.w / 2) / k, y: this.H / 2 - (a.t + a.h / 2) / k }; }
+    resetar(sem) { const b = this.visaoBrasil(); if (sem) { Object.assign(this.v, b); this.ajusta(); this.fitBrasil = true; return; } this.vaiPara(b.x, b.y, b.k); this.fitBrasil = true; }
+    refit() { this.medir(); this.resetar(true); this.agenda(true); }
     // leva a visao ate o alvo com animacao: move a imagem pronta (CSS) a cada quadro e redesenha nitido so no fim
     vaiPara(x, y, k, dur = 420) {
-      const v = this.v, ant = { ...v }; Object.assign(v, { x, y, k }); this.ajusta(); const al = { ...v }; Object.assign(v, ant);
+      this.fitBrasil = false; const v = this.v, ant = { ...v }; Object.assign(v, { x, y, k }); this.ajusta(); const al = { ...v }; Object.assign(v, ant);
       cancelAnimationFrame(this.qa); clearTimeout(this.tm);
       if (document.hidden || dur <= 0 || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) { Object.assign(v, al); this.agenda(true); return; }
       const c0 = [ant.x + this.w / (2 * ant.k), ant.y + this.h / (2 * ant.k)], c1 = [al.x + this.w / (2 * al.k), al.y + this.h / (2 * al.k)], t0 = performance.now();
@@ -54,8 +57,8 @@
       };
       this.qa = requestAnimationFrame(passo);
     }
-    zoomCaixa(b, folga = 1.25) { const ib = this.op.insetBaixo ? this.op.insetBaixo() : 0, hh = Math.max(80, this.h - ib), w = Math.max(b[2] - b[0], 4), h = Math.max(b[3] - b[1], 4), k = Math.min(this.w / (w * folga), hh / (h * folga)); // ib: parte do mapa coberta pela folha
-      this.vaiPara((b[0] + b[2]) / 2 - this.w / k / 2, (b[1] + b[3]) / 2 - hh / k / 2, k); }
+    zoomCaixa(b, folga = 1.25) { const a = this.area(), w = Math.max(b[2] - b[0], 4), h = Math.max(b[3] - b[1], 4), k = Math.min(a.w / (w * folga), a.h / (h * folga));
+      this.vaiPara((b[0] + b[2]) / 2 - (a.l + a.w / 2) / k, (b[1] + b[3]) / 2 - (a.t + a.h / 2) / k, k); }
     zoomPara(idx) { if (idx >= 0) this.zoomCaixa(this.box[idx], 3.2); }
     zoomLista(lista) { if (!lista.length) return; let b = [1e9, 1e9, -1e9, -1e9]; for (const i of lista) { const q = this.box[i]; if (q[0] < b[0]) b[0] = q[0]; if (q[1] < b[1]) b[1] = q[1]; if (q[2] > b[2]) b[2] = q[2]; if (q[3] > b[3]) b[3] = q[3]; } this.zoomCaixa(b, 1.15); }
     zoomMais(f, px, py, anima) { const v = this.v, antes = v.k, x0 = v.x, y0 = v.y; v.k = antes * f; this.ajusta(); const k = v.k; // mantém o ponto sob o cursor
@@ -71,7 +74,7 @@
     setDestaque(set) { this.destaque = set; this.agenda(true); }
 
     // --- desenho ---
-    agenda(ja) { if (ja) { cancelAnimationFrame(this.q); this.q = requestAnimationFrame(() => this.desenha()); this.transforma(); return; }
+    agenda(ja) { if (!ja) this.fitBrasil = false; if (ja) { cancelAnimationFrame(this.q); this.q = requestAnimationFrame(() => this.desenha()); this.transforma(); return; }
       this.transforma(); clearTimeout(this.tm); this.tm = setTimeout(() => this.desenha(), 110); }
     desenhaJa() { cancelAnimationFrame(this.q); this.desenha(); }
     transforma() { if (!this.feito) return; const f = this.feito, k = this.v.k / f.k;
