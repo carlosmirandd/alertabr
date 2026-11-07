@@ -21,7 +21,7 @@ async function publica(corpo) {
   const txt = JSON.stringify(corpo);
   if (OUT) { mkdirSync(OUT, { recursive: true }); writeFileSync(join(OUT, "estado.json"), txt); return; }
   const arq = join(mkdtempSync(join(tmpdir(), "alertabr-")), "estado.json"); writeFileSync(arq, txt);
-  const base = ["r2", "object", "put", `${BUCKET}/${CHAVE}`, "--file", arq, "--content-type", "application/json; charset=utf-8", "--cache-control", "public, max-age=30"];
+  const base = ["r2", "object", "put", `${BUCKET}/${CHAVE}`, "--file", arq, "--content-type", "application/json; charset=utf-8", "--cache-control", "public, max-age=15, s-maxage=15, stale-while-revalidate=60, stale-if-error=600"];
   let r = await run([...base, "--remote"]);
   if (r.err && /unknown argument/i.test(r.saida)) r = await run(base);
   if (r.err) throw new Error(r.saida.slice(-300));

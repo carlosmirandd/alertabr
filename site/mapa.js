@@ -28,7 +28,8 @@
       this.estLab = est.lab; const vb = est.vb.split(" ").map(Number); this.W = vb[2]; this.H = vb[3];
       this.cor = op.cor || (() => NEUTRO); this.vis = null; this.sel = -1; this.hover = -1; this.destaque = null;
       this.v = { x: 0, y: 0, k: 1 }; this.base = null; this.feito = null; this.q = 0; this.tm = 0;
-      this.cv = document.createElement("canvas"); this.cv.className = "mapa-cv"; el.appendChild(this.cv);
+      this.cvp = document.createElement("canvas"); this.cvp.className = "mapa-cv mapa-prev"; this.cv = document.createElement("canvas"); this.cv.className = "mapa-cv"; this.cvt = document.createElement("canvas"); this.cvt.className = "mapa-cv mapa-topo";
+      el.append(this.cvp, this.cv, this.cvt); this.cxp = this.cvp.getContext("2d"); this.cxt = this.cvt.getContext("2d"); this.fade = false; this.qt = 0;
       this.cx = this.cv.getContext("2d", { alpha: true }); this.hc = document.createElement("canvas").getContext("2d"); // contexto só para testar cliques (transformação neutra)
       this.ro = new ResizeObserver(() => { this.medir(); this.ajusta(); this.desenhaJa(); }); this.ro.observe(el);
       this.medir(); this.resetar(true); this.gestos(); this.desenhaJa();
@@ -51,8 +52,8 @@
         if (cx.isPointInPath(this.paths[i], mx, my)) { achado = i; break; } }
       return achado; }
 
-    setCor(fn) { this.cor = fn; this.agenda(true); }
-    setSel(i) { this.sel = i; this.agenda(true); }
+    setCor(fn, fade) { this.cor = fn; this.fade = !!fade; this.agenda(true); }
+    setSel(i) { this.sel = i; this.agendaTopo(); }
     setDestaque(set) { this.destaque = set; this.agenda(true); }
 
     // --- desenho ---
@@ -60,13 +61,27 @@
       this.transforma(); clearTimeout(this.tm); this.tm = setTimeout(() => this.desenha(), 110); }
     desenhaJa() { cancelAnimationFrame(this.q); this.desenha(); }
     transforma() { if (!this.feito) return; const f = this.feito, k = this.v.k / f.k;
-      this.cv.style.transformOrigin = "0 0";
-      this.cv.style.transform = `translate(${((f.x - this.v.x) * this.v.k).toFixed(1)}px,${((f.y - this.v.y) * this.v.k).toFixed(1)}px) scale(${k.toFixed(4)})`; }
+      const t = `translate(${((f.x - this.v.x) * this.v.k).toFixed(1)}px,${((f.y - this.v.y) * this.v.k).toFixed(1)}px) scale(${k.toFixed(4)})`;
+      for (const c of [this.cv, this.cvt, this.cvp]) { c.style.transformOrigin = "0 0"; c.style.transform = t; }
+      this.cvt.style.opacity = "0"; } // durante o gesto a selecao some; volta quando o desenho termina
+    agendaTopo() { if (this.qt) return; this.qt = requestAnimationFrame(() => { this.qt = 0; this.desenhaTopo(); }); }
+    tamanho(cv, W, H) { if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; cv.style.width = this.w + "px"; cv.style.height = this.h + "px"; } }
+    dprAtual() { let dpr = Math.min(window.devicePixelRatio || 1, 2); const maxPx = 2.6e6; if (this.w * this.h * dpr * dpr > maxPx) dpr = Math.sqrt(maxPx / (this.w * this.h)); return dpr; }
+    // camada de cima: so o contorno da cidade selecionada e da que esta sob o mouse (barato, nao toca na camada de cores)
+    desenhaTopo() {
+      const cx = this.cxt, v = this.v, dpr = this.dprAtual(), W = Math.round(this.w * dpr), H = Math.round(this.h * dpr); this.tamanho(this.cvt, W, H);
+      cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, W, H); cx.setTransform(v.k * dpr, 0, 0, v.k * dpr, -v.x * v.k * dpr, -v.y * v.k * dpr); cx.lineJoin = "round";
+      if (this.sel >= 0) { cx.lineWidth = 2.4 / v.k; cx.strokeStyle = "#fff"; cx.stroke(this.paths[this.sel]); }
+      if (this.hover >= 0 && this.hover !== this.sel) { cx.lineWidth = 1.6 / v.k; cx.strokeStyle = "rgba(255,255,255,.8)"; cx.stroke(this.paths[this.hover]); }
+      this.cvt.style.transform = ""; this.cvt.style.opacity = "1";
+    }
     desenha() {
-      this.q = 0; const cx = this.cx, v = this.v;
-      let dpr = Math.min(window.devicePixelRatio || 1, 2); const maxPx = 2.6e6; if (this.w * this.h * dpr * dpr > maxPx) dpr = Math.sqrt(maxPx / (this.w * this.h));
+      this.q = 0; const cx = this.cx, v = this.v, dpr = this.dprAtual();
       const W = Math.round(this.w * dpr), H = Math.round(this.h * dpr);
-      if (this.cv.width !== W || this.cv.height !== H) { this.cv.width = W; this.cv.height = H; this.cv.style.width = this.w + "px"; this.cv.style.height = this.h + "px"; }
+      // dados novos na mesma visao: guarda a imagem antiga e deixa esmaecer por cima (troca suave, sem piscar)
+      const fade = this.fade && this.feito && this.cv.width === W && this.cv.height === H && this.feito.k === v.k && this.feito.x === v.x && this.feito.y === v.y; this.fade = false;
+      if (fade) { this.tamanho(this.cvp, W, H); this.cxp.setTransform(1, 0, 0, 1, 0, 0); this.cxp.clearRect(0, 0, W, H); this.cxp.drawImage(this.cv, 0, 0); this.cvp.style.transition = "none"; this.cvp.style.opacity = "1"; }
+      this.tamanho(this.cv, W, H);
       cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, W, H);
       cx.setTransform(v.k * dpr, 0, 0, v.k * dpr, -v.x * v.k * dpr, -v.y * v.k * dpr);
       const x0 = v.x, y0 = v.y, x1 = v.x + this.w / v.k, y1 = v.y + this.h / v.k, det = v.k > this.kMin() * 3.5, dest = this.destaque;
@@ -78,40 +93,41 @@
         cx.fill(this.paths[i]); cx.stroke(this.paths[i]);
       }
       cx.lineWidth = 1.1 / v.k; cx.strokeStyle = UFLINHA; for (const u in this.estPath) cx.stroke(this.estPath[u]);
-      if (this.sel >= 0) { cx.lineWidth = 2.4 / v.k; cx.strokeStyle = "#fff"; cx.stroke(this.paths[this.sel]); }
-      if (this.hover >= 0 && this.hover !== this.sel) { cx.lineWidth = 1.6 / v.k; cx.strokeStyle = "#ffffffcc"; cx.stroke(this.paths[this.hover]); }
       if (v.k < this.kMin() * 2.6) { // siglas dos estados
         cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.font = "700 11px system-ui, sans-serif"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.lineWidth = 3; cx.strokeStyle = "rgba(15,14,13,.8)"; cx.fillStyle = "#fff";
         for (const u in this.estLab) { const p = this.estLab[u], sx = (p[0] - v.x) * v.k, sy = (p[1] - v.y) * v.k; if (sx < 0 || sy < 0 || sx > this.w || sy > this.h) continue; cx.strokeText(u, sx, sy); cx.fillText(u, sx, sy); }
       }
-      this.feito = { x: v.x, y: v.y, k: v.k }; this.cv.style.transform = "";
+      this.feito = { x: v.x, y: v.y, k: v.k }; for (const c of [this.cv, this.cvp]) c.style.transform = "";
+      if (fade) requestAnimationFrame(() => { this.cvp.style.transition = "opacity .7s ease-out"; this.cvp.style.opacity = "0"; }); else this.cvp.style.opacity = "0";
+      this.desenhaTopo();
     }
 
     // --- gestos: arrastar, pinça, roda do mouse, clique, passar o mouse ---
     gestos() {
       const el = this.el, ptr = new Map(); let arr = null, pin = null, mov = 0;
+      const pos = (e) => { const r = el.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
       el.style.touchAction = "none";
-      el.addEventListener("pointerdown", (e) => { el.setPointerCapture(e.pointerId); ptr.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); mov = 0; arr = ptr.size === 1 ? { x: e.offsetX, y: e.offsetY, vx: this.v.x, vy: this.v.y } : null;
+      el.addEventListener("pointerdown", (e) => { el.setPointerCapture(e.pointerId); const q = pos(e); ptr.set(e.pointerId, { x: q.x, y: q.y }); mov = 0; arr = ptr.size === 1 ? { x: q.x, y: q.y, vx: this.v.x, vy: this.v.y } : null;
         if (ptr.size === 2) { const [a, b] = [...ptr.values()]; pin = { d: Math.hypot(a.x - b.x, a.y - b.y), k: this.v.k }; } });
       el.addEventListener("pointermove", (e) => {
-        const p = ptr.get(e.pointerId);
-        if (!p) { if (e.pointerType === "mouse") this.passa(e.offsetX, e.offsetY); return; }
-        p.x = e.offsetX; p.y = e.offsetY;
+        const p = ptr.get(e.pointerId), q = pos(e);
+        if (!p) { if (e.pointerType === "mouse") this.passa(q.x, q.y); return; }
+        p.x = q.x; p.y = q.y;
         if (ptr.size === 2 && pin) { const [a, b] = [...ptr.values()], d = Math.hypot(a.x - b.x, a.y - b.y), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2, antes = this.v.k;
           this.v.k = pin.k * d / pin.d; this.ajusta(); this.v.x += cx / antes - cx / this.v.k; this.v.y += cy / antes - cy / this.v.k; this.ajusta(); mov = 99; this.agenda(); return; }
-        if (arr && ptr.size === 1) { const dx = e.offsetX - arr.x, dy = e.offsetY - arr.y; mov = Math.max(mov, Math.abs(dx) + Math.abs(dy)); if (mov < 4) return;
+        if (arr && ptr.size === 1) { const dx = q.x - arr.x, dy = q.y - arr.y; mov = Math.max(mov, Math.abs(dx) + Math.abs(dy)); if (mov < 4) return;
           this.v.x = arr.vx - dx / this.v.k; this.v.y = arr.vy - dy / this.v.k; this.ajusta(); this.agenda(); }
       });
       const fim = (e) => { const tinha = ptr.has(e.pointerId); ptr.delete(e.pointerId); if (ptr.size < 2) pin = null;
-        if (tinha && e.type === "pointerup" && mov < 5 && ptr.size === 0) { const i = this.cidadeEm(e.offsetX, e.offsetY); if (this.op.aoClicar) this.op.aoClicar(i, e); }
+        if (tinha && e.type === "pointerup" && mov < 5 && ptr.size === 0) { const q = pos(e), i = this.cidadeEm(q.x, q.y); if (this.op.aoClicar) this.op.aoClicar(i, e); }
         if (ptr.size === 1) { const [id, p] = [...ptr][0]; arr = { x: p.x, y: p.y, vx: this.v.x, vy: this.v.y }; } else arr = null; };
       el.addEventListener("pointerup", fim); el.addEventListener("pointercancel", fim);
-      el.addEventListener("pointerleave", () => { if (this.hover >= 0) { this.hover = -1; this.agenda(true); if (this.op.aoPassar) this.op.aoPassar(-1); } });
-      el.addEventListener("wheel", (e) => { e.preventDefault(); this.zoomMais(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0016)), e.offsetX, e.offsetY); }, { passive: false });
-      el.addEventListener("dblclick", (e) => this.zoomMais(2, e.offsetX, e.offsetY));
+      el.addEventListener("pointerleave", () => { if (this.hover >= 0) { this.hover = -1; this.agendaTopo(); if (this.op.aoPassar) this.op.aoPassar(-1); } });
+      el.addEventListener("wheel", (e) => { e.preventDefault(); const q = pos(e); this.zoomMais(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0016)), q.x, q.y); }, { passive: false });
+      el.addEventListener("dblclick", (e) => { const q = pos(e); this.zoomMais(2, q.x, q.y); });
     }
     passa(px, py) { if (this.tp) return; this.tp = setTimeout(() => { this.tp = 0; }, 40); const i = this.cidadeEm(px, py);
-      if (i !== this.hover) { this.hover = i; this.agenda(true); if (this.op.aoPassar) this.op.aoPassar(i, px, py); } else if (i >= 0 && this.op.aoPassar) this.op.aoPassar(i, px, py); }
+      if (i !== this.hover) { this.hover = i; this.agendaTopo(); if (this.op.aoPassar) this.op.aoPassar(i, px, py); } else if (i >= 0 && this.op.aoPassar) this.op.aoPassar(i, px, py); }
     // forma de um município isolado (para o cartão): devolve {path, caixa}
     forma(i) { return { path: this.paths[i], caixa: this.box[i] }; }
   }

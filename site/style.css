@@ -53,6 +53,7 @@ a { color: #9ac7ff; }
 .corpo { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 380px; }
 .mapa { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg); }
 .mapa-cv { position: absolute; left: 0; top: 0; will-change: transform; }
+.mapa-topo, .mapa-prev { pointer-events: none; } .mapa-prev { opacity: 0; }
 .carrega { position: absolute; inset: 0; display: grid; place-items: center; color: var(--tx3); pointer-events: none; } .carrega.ok { display: none; }
 .zoom { position: absolute; right: 12px; top: 12px; display: grid; gap: 6px; }
 .zoom button { width: 36px; height: 36px; border-radius: var(--r2); border: 1px solid var(--l2); background: rgba(21,20,18,.92); font-size: 18px; transition: background .2s; } .zoom button:hover { background: var(--p3); }
