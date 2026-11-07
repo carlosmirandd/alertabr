@@ -15,6 +15,8 @@ const g = agrupa(it);
 assert.equal(g.length, 2, "junta títulos parecidos");
 assert.equal(g[0].n, 2);
 
+const bing = `<rss xmlns:News="x"><channel><item><title>Chuva forte alaga o Rio</title><link>http://www.bing.com/news/apiclick.aspx?ref=FexRss&amp;aid=&amp;url=https%3a%2f%2fexemplo.com%2fnoticia%2f1&amp;c=1</link><pubDate>Sat, 07 Nov 2026 10:00:00 GMT</pubDate><News:Source>Exemplo</News:Source></item></channel></rss>`;
+const ib = parse(bing); assert.equal(ib.length, 1); assert.equal(ib[0].u, "https://exemplo.com/noticia/1", "usa a URL real do veículo"); assert.equal(ib[0].f, "Exemplo");
 const geo = JSON.parse(readFileSync(new URL("../site/data/municipios.json", import.meta.url)));
 assert.equal(geo.c.length, 5570); assert.equal(geo.n.length, 5570); assert.equal(geo.d.length, 5570);
 assert.ok(geo.c.every((c, i) => i === 0 || c > geo.c[i - 1]), "códigos IBGE em ordem crescente");
