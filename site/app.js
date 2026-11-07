@@ -31,7 +31,7 @@
     const W = innerWidth, H = innerHeight, R = (s) => { const e = $(s); return e && e.offsetParent !== null ? e.getBoundingClientRect() : null; }, res = R("#resumo"), t = res ? res.bottom + 8 : 60;
     if (desk()) { const e = R("#aba-agora"), d = R("#aba-noticias"); return { l: e ? e.right + 12 : 0, r: d ? W - d.left + 12 : 0, t, b: 40 }; }
     const p = $("#painel").getBoundingClientRect(), c = R(".ceu"), l = R(".lista, .detalhe");
-    if (matchMedia("(max-height:559px) and (orientation:landscape)").matches) return { l: c ? c.right + 8 : 0, r: l ? W - l.left + 8 : 0, t, b: 8 };
+    if (matchMedia("(max-height:559px) and (orientation:landscape)").matches) { const g = R(".grip"); return { l: c ? c.right + 8 : 0, r: l ? W - l.left + 8 : 0, t, b: g ? H - g.top + 6 : 8 }; }
     return { l: 0, r: 0, t, b: $("#painel").classList.contains("alto") ? 0 : Math.max(0, H - p.top + 8) };
   }
 
