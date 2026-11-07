@@ -26,7 +26,7 @@
       this.paths = geo.d.map((d) => new Path2D(d)); this.box = geo.d.map(caixa);
       this.ufPath = new Path2D(est.linhas || Object.values(est.d || {}).join(""));
       this.estLab = est.lab; const vb = est.vb.split(" ").map(Number); this.W = vb[2]; this.H = vb[3];
-      this.cor = op.cor || (() => NEUTRO); this.vis = null; this.sel = -1; this.hover = -1; this.destaque = null;
+      this.prio = new Set(); this.cent = new Array(this.n); this.cor = op.cor || (() => NEUTRO); this.vis = null; this.sel = -1; this.hover = -1; this.destaque = null;
       this.v = { x: 0, y: 0, k: 1 }; this.base = null; this.feito = null; this.q = 0; this.tm = 0;
       this.cvp = document.createElement("canvas"); this.cvp.className = "mapa-cv mapa-prev"; this.cv = document.createElement("canvas"); this.cv.className = "mapa-cv"; this.cvt = document.createElement("canvas"); this.cvt.className = "mapa-cv mapa-topo";
       el.append(this.cvp, this.cv, this.cvt); this.cxp = this.cvp.getContext("2d"); this.cxt = this.cvt.getContext("2d"); this.fade = false; this.qt = 0;
@@ -107,6 +107,7 @@
         cx.fill(this.paths[i]); cx.stroke(this.paths[i]);
       }
       cx.lineWidth = 1.1 / v.k; cx.strokeStyle = UFLINHA; cx.stroke(this.ufPath);
+      if (v.k > this.kMin() * 3.2) this.rotulos(cx, dpr, x0, y0, x1, y1);
       if (v.k < this.kMin() * 2.6) { // siglas dos estados
         cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.font = "700 11px system-ui, sans-serif"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.lineWidth = 3; cx.strokeStyle = "rgba(15,14,13,.8)"; cx.fillStyle = "#fff";
         for (const u in this.estLab) { const p = this.estLab[u], sx = (p[0] - v.x) * v.k, sy = (p[1] - v.y) * v.k; if (sx < 0 || sy < 0 || sx > this.w || sy > this.h) continue; cx.strokeText(u, sx, sy); cx.fillText(u, sx, sy); }
@@ -114,6 +115,33 @@
       this.feito = { x: v.x, y: v.y, k: v.k }; for (const c of [this.cv, this.cvp]) c.style.transform = "";
       if (fade) requestAnimationFrame(() => { this.cvp.style.transition = "opacity .7s ease-out"; this.cvp.style.opacity = "0"; }); else this.cvp.style.opacity = "0";
       this.desenhaTopo();
+    }
+
+    // ponto de rotulo dentro do municipio: o centro da caixa, ou o ponto mais proximo dele que caia dentro da forma
+    centroDe(i) {
+      if (this.cent[i]) return this.cent[i]; const b = this.box[i], cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2, h = this.hc; let r = [cx, cy];
+      if (!h.isPointInPath(this.paths[i], cx, cy)) {
+        let melhor = 1e18; for (let a = 1; a <= 7; a++) for (let c = 1; c <= 7; c++) { const x = b[0] + (b[2] - b[0]) * a / 8, y = b[1] + (b[3] - b[1]) * c / 8, d = (x - cx) * (x - cx) + (y - cy) * (y - cy); if (d < melhor && h.isPointInPath(this.paths[i], x, y)) { melhor = d; r = [x, y]; } }
+      }
+      return (this.cent[i] = r);
+    }
+    // nomes de cidades: as maiores na tela (e as capitais) primeiro; um nome so entra se nao bater em outro
+    rotulos(cx, dpr, x0, y0, x1, y1) {
+      const v = this.v, cand = [];
+      for (let i = 0; i < this.n; i++) {
+        const b = this.box[i]; if (b[2] < x0 || b[0] > x1 || b[3] < y0 || b[1] > y1) continue;
+        const area = (b[2] - b[0]) * (b[3] - b[1]) * v.k * v.k; if (area < 500 && i !== this.sel && !this.prio.has(i)) continue;
+        cand.push([i === this.sel ? 1e12 : this.prio.has(i) ? 1e9 + area : area, i]);
+      }
+      cand.sort((a, b) => b[0] - a[0]); if (cand.length > 500) cand.length = 500;
+      cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.font = "600 11px Geist, system-ui, sans-serif"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.lineJoin = "round"; cx.lineWidth = 3.5;
+      const ocupado = []; let n = 0;
+      for (const [, i] of cand) {
+        const c = this.centroDe(i), sx = (c[0] - v.x) * v.k, sy = (c[1] - v.y) * v.k; if (sx < 0 || sy < 0 || sx > this.w || sy > this.h) continue;
+        const nome = this.nomes[i], w = cx.measureText(nome).width + 6, r = [sx - w / 2, sy - 8, sx + w / 2, sy + 8];
+        if (ocupado.some((o) => r[0] < o[2] && r[2] > o[0] && r[1] < o[3] && r[3] > o[1])) continue;
+        ocupado.push(r); cx.strokeStyle = "rgba(15,14,13,.9)"; cx.fillStyle = i === this.sel ? "#fff" : "rgba(250,250,249,.92)"; cx.strokeText(nome, sx, sy); cx.fillText(nome, sx, sy); if (++n >= 90) break;
+      }
     }
 
     // --- gestos: arrastar, pinça, roda do mouse, clique, passar o mouse ---

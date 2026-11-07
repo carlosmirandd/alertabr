@@ -59,7 +59,10 @@ a { color: #9ac7ff; }
 .zoom button { width: 36px; height: 36px; border-radius: var(--r2); border: 1px solid var(--l2); background: rgba(21,20,18,.92); font-size: 18px; transition: background .2s; } .zoom button:hover { background: var(--p3); }
 .leg { position: absolute; left: 12px; bottom: 12px; background: rgba(21,20,18,.92); border: 1px solid var(--l1); border-radius: var(--r2); padding: 8px 10px; display: grid; gap: 4px; font-size: 12px; pointer-events: none; }
 .leg div { display: flex; align-items: center; gap: 7px; color: var(--tx2); } .leg i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
-.tip { position: absolute; pointer-events: none; background: rgba(15,14,13,.96); border: 1px solid var(--l2); border-radius: var(--r1); padding: 5px 9px; font-size: 12px; white-space: nowrap; transform: translate(12px, 12px); z-index: 5; }
+.tip { position: absolute; left: 0; top: 0; pointer-events: none; min-width: 190px; max-width: 280px; background: rgba(21,20,18,.97); border: 1px solid var(--l2); border-radius: var(--r2); padding: 9px 11px; font-size: 12px; z-index: 5; box-shadow: 0 10px 30px rgba(0,0,0,.55); }
+.tip[hidden] { display: none; }
+.tip-t { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; } .tip-t b { font: 600 15px var(--serif); } .tip-t span { color: var(--tx3); font-weight: 600; }
+.tip-l { display: flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--tx2); } .tip-s { color: var(--tx3); margin-top: 4px; } .tip-d { border-top: 1px solid var(--l1); padding-top: 6px; margin-top: 8px; font-size: 11px; }
 
 /* painel lateral */
 .painel { min-height: 0; display: flex; flex-direction: column; background: var(--p1); border-left: 1px solid var(--l1); }
@@ -108,5 +111,15 @@ h3 { margin: 16px 0 6px; font-size: 11px; letter-spacing: .08em; text-transform:
   .busca { flex: 1 1 100%; order: 5; max-width: none; } .camadas { margin-left: auto; } .status { margin-left: 0; order: 3; }
   .status.velho #stTxt, .status.erro #stTxt { display: none; }
   .mapa { position: absolute; left: 0; right: 0; top: 0; bottom: 40dvh; } .corpo:has(.painel.baixo) .mapa { bottom: 104px; }
+}
+/* celular deitado (pouca altura): mapa ao lado do painel, cabecalho e placar enxutos */
+@media (max-height: 520px) and (orientation: landscape) {
+  .topo { flex-wrap: nowrap; gap: 8px; padding: 4px 10px; } .busca { flex: 1 1 140px; order: 0; max-width: 320px; } .camadas { margin-left: auto; } .status { order: 0; margin-left: 0; } .camadas button { padding: 4px 10px; }
+  .placar { padding: 4px 10px 6px; } .pl b { font-size: 20px; margin-top: 0; } .pl small, .barra-txt { display: none; } .pl .rot { font-size: 10px; } .barra { margin-top: 4px; height: 4px; }
+  .corpo { grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: minmax(0, 1fr); }
+  .mapa, .corpo:has(.painel.baixo) .mapa { position: relative; inset: auto; bottom: auto; }
+  .painel, .painel.baixo, .painel.alto { position: static; height: auto; max-height: none; border-radius: 0; border-top: 0; border-left: 1px solid var(--l1); box-shadow: none; }
+  .grip, .rodape { display: none; } .aba { padding: 8px 12px; } .abas { padding: 4px 8px; }
+  .leg { top: auto; bottom: 6px; left: 6px; max-width: 60%; font-size: 10px; padding: 4px 6px; } .zoom { top: 6px; right: 6px; } .zoom button { width: 30px; height: 30px; }
 }
 @media (prefers-reduced-motion: reduce) { .dot, .esq { animation: none; } .painel, .barra i, .btn { transition: none; } }

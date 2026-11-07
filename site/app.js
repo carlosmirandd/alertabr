@@ -23,6 +23,7 @@
     try { [G, E] = await Promise.all([json("data/municipios.json", 30000), json("data/estados.json", 30000)]); }
     catch (e) { $("#carrega").textContent = "Não foi possível carregar o mapa. Recarregue a página."; return; }
     mapa = new window.MapaBrasil($("#mapa"), G, E, { cor: corDe, aoClicar: aoClicar, aoPassar: aoPassar });
+    mapa.prio = new Set([...CAPITAIS].map((c) => G.c.indexOf(c)).filter((k) => k >= 0));
     $("#carrega").classList.add("ok"); legenda(); pintaAgora(); ligaUI();
     const h = /#m=(\d{7})/.exec(location.hash); await atualiza(true);
     if (h) { const i = G.c.indexOf(+h[1]); if (i >= 0) seleciona(i); }
@@ -30,7 +31,8 @@
   }
   function validado(j) { return j && j.v === 1 && Array.isArray(j.s) && j.s.length === G.c.length && Array.isArray(j.f) ? j : null; }
   async function atualiza(primeira) {
-    const urls = [CFG.FEED && CFG.FEED + "?v=" + Math.floor(Date.now() / 30000), CFG.RESERVA, CFG.LOCAL].filter(Boolean);
+    const emLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && !/[?&]feed=1/.test(location.search); // no seu computador: usa o arquivo local (veja o README)
+    const urls = emLocal ? [CFG.LOCAL] : [CFG.FEED && CFG.FEED + "?v=" + Math.floor(Date.now() / 30000), CFG.RESERVA, CFG.LOCAL].filter(Boolean);
     for (let k = 0; k < urls.length; k++) {
       const u = urls[(fonteOk + k) % urls.length];
       try {
@@ -86,8 +88,18 @@
   function aoClicar(i) { seleciona(i); }
   function aoPassar(i, px, py) {
     const tip = $("#tip"); if (i < 0) { tip.hidden = true; return; }
-    const nome = G.n[i] + " · " + ufDe(i), extra = D ? (camada === "alertas" ? (D.s[i] ? " · " + NOME_SEV[D.s[i]] : "") : D.f[i] ? " · " + D.f[i] + " foco" + (D.f[i] > 1 ? "s" : "") : "") : "";
-    tip.textContent = nome + extra; tip.hidden = false; tip.style.left = Math.min(px, $("#mapa").clientWidth - 200) + "px"; tip.style.top = py + "px";
+    if (tip.dataset.i !== String(i) || tip.dataset.v !== String(D ? D.gerado : 0) + camada) { // so remonta o conteudo quando muda de municipio
+      tip.dataset.i = i; tip.dataset.v = String(D ? D.gerado : 0) + camada;
+      let h = `<div class="tip-t"><b>${esc(G.n[i])}</b><span>${ufDe(i)}</span></div>`;
+      if (D) {
+        const al = alertasDe(i).filter((x) => x.h === 0).sort((x, y) => y.sev - x.sev), foc = D.f[i];
+        h += al.length ? al.slice(0, 2).map((x) => `<div class="tip-l"><span class="tag" style="--c:${esc(x.cor)}">${NOME_SEV[x.sev] || ""}</span>${esc(x.t)}</div>`).join("") + (al.length > 2 ? `<div class="tip-s">+${al.length - 2} aviso${al.length > 3 ? "s" : ""}</div>` : "") : '<div class="tip-s">Sem aviso do INMET hoje</div>';
+        h += `<div class="tip-l"><b style="color:var(--fogo)">${fmt(foc)}</b>&nbsp;foco${foc === 1 ? "" : "s"} de calor em 24 h</div>`;
+      }
+      tip.innerHTML = h + '<div class="tip-s tip-d">Clique para ver detalhes</div>';
+    }
+    tip.hidden = false; const m = $("#mapa"), w = tip.offsetWidth, hh = tip.offsetHeight;
+    tip.style.left = Math.max(6, Math.min(px + 14, m.clientWidth - w - 6)) + "px"; tip.style.top = Math.max(6, py + hh + 24 > m.clientHeight ? py - hh - 12 : py + 14) + "px";
   }
   function seleciona(i, semZoom) {
     sel = i; destaquePos = -1; mapa.setDestaque(null); mapa.setSel(i);

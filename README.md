@@ -35,17 +35,39 @@ Pontos de design que importam para o desempenho:
 - **Leitura em cascata**: R2 → `/api/estado` → cópia local do deploy. Se uma falhar, a próxima assume.
 - **Mapa em canvas** com caixa de cada município (só desenha o visível), imagem em cache movida por CSS durante gestos e redesenho só quando para, teto de pixels no canvas (telas 4K não pesam).
 
-## Rodar localmente
+## Rodar no seu computador (sem Cloudflare)
 
-Precisa de Node 20+ (e Python 3 só se quiser refazer a malha).
+Não precisa de conta em nada: o site, o relay e as notícias rodam localmente.
+
+**Requisitos:** [Node.js](https://nodejs.org) 20 ou mais novo e Git. Python 3 só se quiser refazer a malha dos municípios.
 
 ```bash
-npm run semente   # baixa INMET + INPE e grava site/data/estado.json
-npm run dev       # http://localhost:8788
-npm test
+git clone https://github.com/carlosmirandd/alertabr
+cd alertabr
+npm run semente    # baixa INMET + INPE e grava site/data/estado.json (leva alguns segundos)
+npm run dev        # sobe o site em http://localhost:8788
 ```
 
-`npm run geo` refaz `site/data/municipios.json` e `estados.json` a partir do IBGE (já vêm no repositório).
+Abra http://localhost:8788. Em `localhost` o site lê o `site/data/estado.json` do seu computador (para testar com o feed publicado, abra `http://localhost:8788/?feed=1`).
+
+**Manter os dados atualizados enquanto você usa**, em um segundo terminal:
+
+```bash
+node relay/relay.mjs --out site/data     # atualiza o arquivo a cada 5 min
+```
+
+Para atualizar mais rápido (mínimo 60 s), defina `INTERVALO`. No PowerShell: `$env:INTERVALO=120; node relay/relay.mjs --out site/data`. No Linux/macOS: `INTERVALO=120 node relay/relay.mjs --out site/data`. A página relê o arquivo a cada 60 s.
+
+**Outras coisas úteis:**
+
+| Comando | Para quê |
+|---|---|
+| `npm run dev -- 3000` | usar outra porta |
+| `npm test` | testes rápidos (sem dependências) |
+| `npm run geo` | refaz a malha dos municípios a partir do IBGE (Python 3; cache em `geo/.cache`) |
+| `npx wrangler pages dev site` | testar com o ambiente real da Cloudflare (funções), se você tiver o wrangler |
+
+As **notícias** funcionam no `npm run dev`: ele executa a mesma função de `functions/api/noticias.js`. Se você hospedar a pasta `site/` em um servidor estático qualquer (sem funções), tudo funciona, menos a aba Notícias.
 
 ## Publicar (Cloudflare)
 
