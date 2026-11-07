@@ -1,21 +1,32 @@
-# Opcional: roda o relay no GitHub Actions em vez de no seu computador.
-# Precisa dos secrets CLOUDFLARE_API_TOKEN (permissão R2 edit) e CLOUDFLARE_ACCOUNT_ID.
-# Para ativar o agendamento, descomente o bloco "schedule". Não testado a partir dos IPs do GitHub.
+# Roda o relay na nuvem (sem o seu computador): lê INMET + INPE e grava o estado.json no R2.
+# Secrets necessários (Settings > Secrets and variables > Actions): CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID.
+# Variáveis opcionais (aba Variables): BUCKET (padrão alertabr) e PREVIO (endereço público do estado.json, para reaproveitar
+# a parte de uma fonte que tenha caído). Sem os secrets, a execução termina sem fazer nada.
 name: relay
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: "*/10 * * * *"
+  schedule:
+    - cron: "*/10 * * * *"
+concurrency:
+  group: relay
+  cancel-in-progress: false
 jobs:
   publica:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - run: node relay/relay.mjs --uma
+        with:
+          node-version: 22
+      - name: Publicar estado.json
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           BUCKET: ${{ vars.BUCKET || 'alertabr' }}
+          PREVIO: ${{ vars.PREVIO }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "Secrets da Cloudflare não configurados: nada a publicar."; exit 0
+          fi
+          node relay/relay.mjs --uma

@@ -67,7 +67,7 @@ node relay/relay.mjs                                      # deixe rodando
 
 O endereço `r2.dev` serve para começar, mas a Cloudflare o limita; para uso intenso, ligue um domínio seu ao bucket e use esse endereço em `FEED`. Variáveis do relay: `BUCKET` (padrão `alertabr`), `CHAVE` (padrão `estado.json`), `INTERVALO` em segundos (padrão 300).
 
-Para rodar o relay sem o seu computador, veja `.github/workflows/relay.yml` (agendamento desligado por padrão; não foi testado a partir dos IPs do GitHub).
+Para rodar o relay sem o seu computador, use `.github/workflows/relay.yml` (a cada 10 min no GitHub Actions; precisa dos secrets `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`). Repositório público não consome minutos do plano.
 
 ## Limites e cuidados
 
