@@ -2,7 +2,7 @@
 (function () {
   const CFG = window.ALERTABR, $ = (s) => document.querySelector(s);
   const UFS = { 11: "RO", 12: "AC", 13: "AM", 14: "RR", 15: "PA", 16: "AP", 17: "TO", 21: "MA", 22: "PI", 23: "CE", 24: "RN", 25: "PB", 26: "PE", 27: "AL", 28: "SE", 29: "BA", 31: "MG", 32: "ES", 33: "RJ", 35: "SP", 41: "PR", 42: "SC", 43: "RS", 50: "MS", 51: "MT", 52: "GO", 53: "DF" };
-  const NOME_SEV = window.Cartao.NOME_SEV, SEV_CURTO = { 1: "Potencial", 2: "Perigo", 3: "Grande" };
+  const NOME_SEV = window.Cartao.NOME_SEV;
   let COR_SEV = {}, COR_FOGO = [];
   function lerCores() { // as cores do mapa vêm das variáveis CSS do tema atual (claro/escuro)
     const cs = getComputedStyle(document.documentElement), v = (n) => cs.getPropertyValue(n).trim();
@@ -80,10 +80,13 @@
   let erroDados = false;
   function aplica(j) {
     if (D && j.gerado <= D.gerado) { status(); return; } // um arquivo mais velho que o que já temos não substitui os dados
-    D = j; semDados = false; erroDados = false; montaMembros(); mapa.setCor(corDe, true); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null);
+    const antes = D ? D.s.reduce((a, x) => a + (x ? 1 : 0), 0) : -1;
+    D = j; semDados = false; erroDados = false; montaMembros();
+    if (antes >= 0) { const agora = D.s.reduce((a, x) => a + (x ? 1 : 0), 0); anuncia("Alertas atualizados." + (agora !== antes ? ` Agora são ${fmt(agora)} municípios com aviso.` : "")); } mapa.setCor(corDe, true); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null);
     legenda(); pintaHero(); pintaAgora(); pintaCartao(); if (sujo.n) pintaNoticias(); status();
   }
-  function falhaDados() { if (!D) { erroDados = true; pintaAgora(); pintaHero(); } status("erro"); }
+  function falhaDados() { if (!D) { erroDados = true; pintaAgora(); pintaHero(); anuncia("Não foi possível buscar os alertas."); } status("erro"); }
+  function anuncia(txt) { const el = $("#anuncio"); el.textContent = ""; setTimeout(() => { el.textContent = txt; }, 50); }
   async function atualiza() { const j = await buscaEstado(); if (j) aplica(j); else falhaDados(); }
   function ciclo() {
     clearTimeout(timer);
@@ -381,8 +384,8 @@
       else if (d.fut) { verFut = true; pintaAgora(); }
       else if (d.tenta === "dados") { erroDados = false; pintaAgora(); atualiza(); } else if (d.tenta === "noticias") { feedN = null; cacheN.clear(); pintaNoticias(); } else if (d.ir) trocaAba(d.ir); else if (d.uf) selecionaUf(+d.uf); else if (d.limpa) { seleciona(-1); mapa.resetar(); }
       else if (d.tema) { tema = d.tema; pintaNoticias(); } else if (d.fmt) { formato = d.fmt; pintaCartao(); }
-      else if (d.baixa && cartaoCv) window.Cartao.baixa(cartaoCv, nomeArq());
-      else if (d.comp && cartaoCv) window.Cartao.compartilha(cartaoCv, nomeArq(), (sel >= 0 ? G.n[sel] + ": " : selUf ? NOME_UF[selUf] + ": " : "") + "alertas e focos de calor em tempo real").then((ok) => { if (!ok) window.Cartao.baixa(cartaoCv, nomeArq()); });
+      else if (d.baixa && cartaoCv) { window.Cartao.baixa(cartaoCv, nomeArq()); aviso("Imagem baixada."); }
+      else if (d.comp && cartaoCv) window.Cartao.compartilha(cartaoCv, nomeArq(), (sel >= 0 ? G.n[sel] + ": " : selUf ? NOME_UF[selUf] + ": " : "") + "alertas e focos de calor em tempo real").then((ok) => { if (!ok) { window.Cartao.baixa(cartaoCv, nomeArq()); aviso("Este navegador não compartilha imagens diretamente. A imagem foi baixada para você enviar."); } });
     });
     $("#painel").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && (e.target.dataset.alerta != null || e.target.dataset.cid != null)) { e.preventDefault(); e.target.click(); } });
     busca();

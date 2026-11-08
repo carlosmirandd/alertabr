@@ -60,6 +60,7 @@ a { color: inherit; text-underline-offset: 2px; }
 * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--on) 28%, transparent) transparent; }
 .ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 [hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- mapa (o protagonista) ---------- */
 .app { position: fixed; inset: 0; overflow: hidden; background: var(--map-sea); }
