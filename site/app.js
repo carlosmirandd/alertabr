@@ -428,22 +428,46 @@
   }
 
   // ---------- busca ----------
+  // distância de edição com transposição (Damerau restrita), parando cedo quando passa do limite
+  function dist(a, b, lim) {
+    if (Math.abs(a.length - b.length) > lim) return 99;
+    let p2 = null, p1 = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const c = [i]; let menor = i;
+      for (let j = 1; j <= b.length; j++) {
+        let v = Math.min(p1[j] + 1, c[j - 1] + 1, p1[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (p2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, p2[j - 2] + 1);
+        c.push(v); if (v < menor) menor = v;
+      }
+      if (menor > lim) return 99; p2 = p1; p1 = c;
+    }
+    return p1[b.length];
+  }
   function busca() {
     const inp = $("#q"), ul = $("#sug"); let achados = [], pos = -1, tb = 0;
     const fecha = () => { ul.hidden = true; inp.setAttribute("aria-expanded", "false"); pos = -1; }, fim = () => { fecha(); $("#barra").classList.remove("buscando"); };
-    const pinta = () => { ul.innerHTML = achados.map((i, k) => `<li role="option" data-i="${i}" aria-selected="${k === pos}">${i < 0 ? esc(NOME_UF[-i]) + "<small>Estado · " + UFS[-i] + "</small>" : esc(G.n[i]) + "<small>" + ufDe(i) + "</small>"}</li>`).join(""); ul.hidden = !achados.length; inp.setAttribute("aria-expanded", String(!!achados.length)); };
+    const pinta = () => {
+      if (!achados.length) { ul.innerHTML = '<li class="sug-vazio" role="option" aria-disabled="true" id="sug-0">Nenhum município encontrado. Confira o nome ou tente só o começo.</li>'; ul.hidden = false; inp.setAttribute("aria-expanded", "true"); inp.removeAttribute("aria-activedescendant"); return; }
+      if (pos >= 0) inp.setAttribute("aria-activedescendant", "sug-" + pos); else inp.removeAttribute("aria-activedescendant");
+      ul.innerHTML = achados.map((i, k) => `<li role="option" id="sug-${k}" data-i="${i}" aria-selected="${k === pos}">${i < 0 ? esc(NOME_UF[-i]) + "<small>Estado · " + UFS[-i] + "</small>" : esc(G.n[i]) + "<small>" + ufDe(i) + "</small>"}</li>`).join(""); ul.hidden = !achados.length; inp.setAttribute("aria-expanded", String(!!achados.length)); };
     inp.addEventListener("input", () => { clearTimeout(tb); tb = setTimeout(() => {
       const v = norm(inp.value).trim(); if (v.length < 2) { achados = []; fecha(); return; }
       if (!porNome) porNome = G.n.map(norm);
       const a = [], b = []; for (let i = 0; i < porNome.length; i++) { const p = porNome[i].indexOf(v); if (p === 0) a.push(i); else if (p > 0) b.push(i); }
       const pri = (i) => (porNome[i] === v ? 0 : 1) + (CAPITAIS.has(G.c[i]) ? 0 : 0.5); a.sort((x, y) => pri(x) - pri(y));
       const es = Object.keys(NOME_UF).filter((c) => norm(NOME_UF[c]).startsWith(v) || norm(UFS[c]) === v).map((c) => -c); // estados primeiro (valor negativo = código do estado)
-      achados = es.concat(a, b).slice(0, 8); pos = -1; pinta(); }, 80); });
+      achados = es.concat(a, b);
+      if (achados.length < 8 && v.length >= 4) { // erro leve de digitação ("sao paolo", "florianopolsi"): distância de edição até 1 (até 2 em nomes longos)
+        const lim = v.length >= 8 ? 2 : 1, ja = new Set(achados), perto = [];
+        for (let i = 0; i < porNome.length; i++) { if (ja.has(i)) continue; const n = porNome[i], d = Math.min(dist(v, n, lim), n.length > v.length ? dist(v, n.slice(0, v.length), lim) : 99); if (d <= lim) perto.push([d, CAPITAIS.has(G.c[i]) ? 0 : 1, i]); }
+        perto.sort((x, y) => x[0] - y[0] || x[1] - y[1]); achados = achados.concat(perto.map((x) => x[2]));
+      }
+      achados = achados.slice(0, 8); pos = -1; pinta(); }, 80); });
     inp.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown") { pos = Math.min(achados.length - 1, pos + 1); pinta(); e.preventDefault(); } else if (e.key === "ArrowUp") { pos = Math.max(0, pos - 1); pinta(); e.preventDefault(); }
+      if (e.key === "ArrowDown") { if (ul.hidden && inp.value) inp.dispatchEvent(new Event("input")); pos = Math.min(achados.length - 1, pos + 1); pinta(); e.preventDefault(); } else if (e.key === "ArrowUp") { pos = Math.max(0, pos - 1); pinta(); e.preventDefault(); }
       else if (e.key === "Enter" && achados.length) { const v = achados[pos < 0 ? 0 : pos]; v < 0 ? selecionaUf(-v) : seleciona(v); fim(); inp.blur(); } else if (e.key === "Escape") { fim(); inp.blur(); }
     });
-    ul.addEventListener("mousedown", (e) => { const li = e.target.closest("li"); if (li) { e.preventDefault(); const v = +li.dataset.i; v < 0 ? selecionaUf(-v) : seleciona(v); fim(); inp.blur(); } });
+    ul.addEventListener("mousedown", (e) => { const li = e.target.closest("li[data-i]"); if (li) { e.preventDefault(); const v = +li.dataset.i; v < 0 ? selecionaUf(-v) : seleciona(v); fim(); inp.blur(); } });
     inp.addEventListener("blur", () => setTimeout(fim, 150));
   }
   if ("serviceWorker" in navigator) {
