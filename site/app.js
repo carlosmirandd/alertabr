@@ -45,10 +45,9 @@
     try { G = await json("data/mun.json", 30000); }
     catch (e) { erroMapa("Não foi possível carregar a lista de municípios. Verifique a conexão."); status("erro"); return; }
     criaMapa(); legenda(); pintaAgora(); ligaUI();
-    const h = /#m=(\d{7})/.exec(location.hash), hu = /#uf=(\d{2})/.exec(location.hash); if (/[?&]camada=focos/.test(location.search)) setCamada("focos");
     const j = await pDados; if (j) aplica(j); else falhaDados();
     if (mapa.fitBrasil !== false && mapa.refit) mapa.refit(); // enquadra o Brasil já descontando os cartões que acabaram de aparecer
-    if (h) { const i = G.c.indexOf(+h[1]); if (i >= 0) seleciona(i); } else if (hu && NOME_UF[+hu[1]]) selecionaUf(+hu[1]);
+    leURL(); addEventListener("popstate", leURL);
     ciclo();
   }
   function criaMapa() {
@@ -150,14 +149,31 @@
   }
   function seleciona(i, semZoom) {
     sel = i; selUf = 0; destaquePos = -1; pilSel = -1; verFut = false; mapa.setDestaque(null); mapa.setSel(i);
-    if (i >= 0) { if (folha()) folhaPara("meio"); history.replaceState(null, "", "#m=" + G.c[i]); if (!semZoom) mapa.zoomPara(i); } else history.replaceState(null, "", location.pathname);
+    if (i >= 0) { if (folha()) folhaPara("meio"); if (!semZoom) mapa.zoomPara(i); }
+    gravaURL(true);
     $("#q").value = i >= 0 ? G.n[i] : ""; pintaHero(); pintaAgora(); pintaNoticias(); pintaCartao();
   }
   function selecionaUf(cod) { // visão do estado: resumo, avisos, focos e notícias só dele
     sel = -1; selUf = cod; destaquePos = -1; pilSel = -1; verFut = false; mapa.setDestaque(null); mapa.setSel(-1);
     if (folha()) folhaPara("meio");
-    history.replaceState(null, "", "#uf=" + cod); mapa.zoomLista(idxUf(cod)); $("#q").value = NOME_UF[cod];
+    gravaURL(true); mapa.zoomLista(idxUf(cod)); $("#q").value = NOME_UF[cod];
     pintaHero(); pintaAgora(); pintaNoticias(); pintaCartao();
+  }
+  // ---------- estado da tela na URL: #m=código | #uf=NN, &camada=focos, &aba=noticias|cartao ----------
+  // Trocar de lugar cria uma entrada no histórico (o "voltar" do navegador funciona); camada e aba só atualizam o endereço.
+  let lendoURL = false;
+  function hashAtual() { const p = []; if (sel >= 0) p.push("m=" + G.c[sel]); else if (selUf) p.push("uf=" + selUf); if (camada === "focos") p.push("camada=focos"); if (aba !== "agora") p.push("aba=" + aba); return p.length ? "#" + p.join("&") : ""; }
+  function gravaURL(novo) { if (lendoURL || !G) return; const h = hashAtual(); if (h === location.hash) return; const u = location.pathname + location.search + h; if (novo) history.pushState(null, "", u); else history.replaceState(null, "", u); }
+  function leURL() {
+    lendoURL = true;
+    try {
+      const q = new URLSearchParams(location.hash.slice(1)), m = +q.get("m"), uf = +q.get("uf"), a = q.get("aba");
+      setCamada(q.get("camada") === "focos" || /[?&]camada=focos/.test(location.search) ? "focos" : "alertas");
+      if (m) { const i = G.c.indexOf(m); if (i >= 0 && i !== sel) seleciona(i); }
+      else if (uf && NOME_UF[uf]) { if (selUf !== uf || sel >= 0) selecionaUf(uf); }
+      else if (sel >= 0 || selUf) { seleciona(-1); mapa.resetar(); }
+      trocaAba(["agora", "noticias", "cartao"].includes(a) ? a : "agora");
+    } finally { lendoURL = false; }
   }
   function alertasDe(i) { return D && D.m[i] ? D.m[i].map((p) => D.alertas[p]).filter(Boolean) : []; }
 
@@ -332,7 +348,8 @@
     aba = a;
     for (const t of document.querySelectorAll(".abas [role=tab]")) { const on = t.dataset.aba === a; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; $("#aba-" + t.dataset.aba).hidden = !on; }
     if (a === "noticias") pintaNoticias(); else if (a === "cartao") pintaCartao();
-    if (folha() && altura === "baixo") folhaPara("meio");
+    if (folha() && altura === "baixo" && !lendoURL) folhaPara("meio");
+    gravaURL(false);
     if (foco) $("#t-" + a).focus();
     $("#pCorpo").scrollTop = 0;
   }
@@ -398,7 +415,7 @@
   function setCamada(c) {
     if (camada === c) { pintaHero(); return; }
     camada = c; $("#c-alertas").setAttribute("aria-checked", c === "alertas"); $("#c-focos").setAttribute("aria-checked", c === "focos");
-    legenda(); mapa.setCor(corDe, true); if (D) { pintaHero(); pintaAgora(); }
+    legenda(); mapa.setCor(corDe, true); if (D) { pintaHero(); pintaAgora(); } gravaURL(false);
   }
   // ---------- tema claro/escuro ----------
   const escuroAgora = () => { const t = document.documentElement.dataset.tema; return t ? t === "escuro" : matchMedia("(prefers-color-scheme: dark)").matches; };
