@@ -6,7 +6,7 @@ window.ALERTABR = {
   RESERVA: "/api/estado",                                              // função do site (se o R2 falhar por CORS/rede)
   LOCAL: "data/estado.json",                                           // cópia incluída no deploy (último recurso)
   INTERVALO: 60000,                                                    // ms entre leituras (pausa com a aba escondida)
-  VELHO: 25 * 60 * 1000,                                               // dados mais velhos que isso ganham aviso
+  VELHO: 30 * 60 * 1000,                                               // dados mais velhos que isso ganham aviso
   // Anúncios (Google AdSense). Enquanto "cliente" estiver vazio NADA de anúncio é carregado e a faixa não aparece.
   //   cliente: "ca-pub-0000000000000000"   (seu ID de editor)      slotDesk: unidade 728x90      slotMovel: unidade 320x50
   // Para ver o espaço sem conta no AdSense, abra o site com ?ads=demo
