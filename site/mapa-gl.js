@@ -127,6 +127,14 @@
     zoomPara(i) { if (i < 0) return; this.fitBrasil = false; this.map.fitBounds(this.bnd[i], { padding: this.padding(), maxZoom: 11, duration: 700 }); }
     zoomLista(lista) { if (!lista.length) return; let b = [[1e9, 1e9], [-1e9, -1e9]]; for (const i of lista) { const q = this.bnd[i]; b[0][0] = Math.min(b[0][0], q[0][0]); b[0][1] = Math.min(b[0][1], q[0][1]); b[1][0] = Math.max(b[1][0], q[1][0]); b[1][1] = Math.max(b[1][1], q[1][1]); } this.fitBrasil = false; this.map.fitBounds(b, { padding: this.padding(), maxZoom: 9, duration: 700 }); }
     zoomMais(f, px, py, anima) { const m = this.map; this.fitBrasil = false; m.easeTo({ zoom: m.getZoom() + Math.log2(f), around: m.unproject([px, py]), duration: anima ? 300 : 0 }); }
+    // município sob um ponto (lon, lat): aproxima, espera os tiles e consulta o polígono desenhado. Devolve o índice ou -1.
+    municipioEm(lon, lat) {
+      const m = this.map; this.fitBrasil = false;
+      return new Promise((ok) => {
+        m.easeTo({ center: [lon, lat], zoom: Math.max(m.getZoom(), 9), duration: 600 });
+        m.once("idle", () => { const f = m.queryRenderedFeatures(m.project([lon, lat]), { layers: ["mun-fill"] })[0]; ok(f ? this.idx.get(f.id) ?? -1 : -1); });
+      });
+    }
     // contorno detalhado (cartão de compartilhar, localização): baixado só quando preciso, em segundo plano
     carregaFormas() { if (!this.pFormas) this.pFormas = fetch("data/municipios.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((g) => { this.paths = g.d; return g; }).catch((e) => { this.pFormas = null; throw e; }); return this.pFormas; }
     forma(i) { return this.paths && this.paths[i] ? { path: new Path2D(this.paths[i]), caixa: caixa(this.paths[i]) } : null; }

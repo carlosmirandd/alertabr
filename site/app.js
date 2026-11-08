@@ -376,6 +376,7 @@
     });
     $("#c-alertas").addEventListener("click", () => setCamada("alertas")); $("#c-focos").addEventListener("click", () => setCamada("focos"));
     $("#zMais").addEventListener("click", () => mapa.zoomMais(1.6, mapa.w / 2, mapa.h / 2, true)); $("#zMenos").addEventListener("click", () => mapa.zoomMais(1 / 1.6, mapa.w / 2, mapa.h / 2, true));
+    $("#zLoc").addEventListener("click", minhaLocal);
     $("#zBr").addEventListener("click", () => { destaquePos = -1; mapa.setDestaque(null); seleciona(-1); mapa.resetar(); pintaAgora(); });
     $("#grip").addEventListener("click", () => painelAltura($("#painel").classList.contains("alto") ? "meio" : "alto"));
     $("#tema").addEventListener("click", alternaTema); atualizaIconeTema();
@@ -398,6 +399,30 @@
     });
     $("#painel").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && (e.target.dataset.alerta != null || e.target.dataset.cid != null)) { e.preventDefault(); e.target.click(); } });
     busca();
+  }
+  // aviso curto sobre o mapa (localização, cópias...): some sozinho
+  let tAviso = 0;
+  function aviso(txt, ms = 6000) { const el = $("#avisoFlut"); el.textContent = txt; el.hidden = !txt; clearTimeout(tAviso); if (txt && ms) tAviso = setTimeout(() => { el.hidden = true; }, ms); }
+  const BR = [-74.2, -34, -28.6, 5.4];
+  function minhaLocal() {
+    const b = $("#zLoc");
+    if (!("geolocation" in navigator)) { aviso("Este navegador não informa a localização. Busque seu município pelo nome."); return; }
+    b.setAttribute("aria-busy", "true"); aviso("Buscando sua localização…", 0);
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lon = pos.coords.longitude, lat = pos.coords.latitude;
+      if (lon < BR[0] || lon > BR[2] || lat < BR[1] || lat > BR[3]) { b.removeAttribute("aria-busy"); aviso("Sua localização está fora do Brasil. O alertabr mostra só municípios brasileiros."); return; }
+      let i = -1;
+      if (mapa.municipioEm) i = await mapa.municipioEm(lon, lat);
+      else { let melhor = 1e9; for (let k = 0; k < G.c.length; k++) { const x0 = G.b[4 * k] / 100, y0 = G.b[4 * k + 1] / 100, x1 = G.b[4 * k + 2] / 100, y1 = G.b[4 * k + 3] / 100, a = (x1 - x0) * (y1 - y0); if (lon >= x0 && lon <= x1 && lat >= y0 && lat <= y1 && a < melhor) { melhor = a; i = k; } } }
+      b.removeAttribute("aria-busy");
+      if (i < 0) { aviso("Não encontramos um município brasileiro nesse ponto. Busque seu município pelo nome."); return; }
+      aviso(""); seleciona(i, true);
+    }, (err) => {
+      b.removeAttribute("aria-busy");
+      aviso(err.code === 1 ? "Você não permitiu o acesso à localização. Libere nas configurações do navegador ou busque seu município pelo nome."
+        : err.code === 3 ? "A localização demorou demais para responder. Tente de novo ou busque pelo nome."
+        : "Não foi possível descobrir sua localização agora. Tente de novo ou busque pelo nome.", 9000);
+    }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 });
   }
   function abreBusca() { $("#barra").classList.add("buscando"); $("#q").focus(); $("#q").select(); }
   function setCamada(c) {

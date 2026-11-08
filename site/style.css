@@ -328,6 +328,10 @@ html.com-ads { --safe-b: calc(env(safe-area-inset-bottom, 0px) + var(--ad-h)); }
 .rw.sev-3 > i, .st.s3 i { background-image: repeating-linear-gradient(135deg, var(--sev-padrao) 0 1.5px, transparent 1.5px 4px); } .rw.sev-2 > i, .st.s2 i { background-image: radial-gradient(var(--sev-padrao) 1px, transparent 1.3px); background-size: 4px 4px; }
 .rw i, .st i, .leg i { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on) 22%, transparent); }
 
+.aviso-flut { position: fixed; z-index: 35; left: 50%; transform: translateX(-50%); top: calc(var(--safe-t) + 132px); width: max-content; max-width: min(440px, calc(100% - 32px)); padding: 12px 16px; border-radius: 16px; background: var(--on); color: var(--bg); font-size: 14px; line-height: 1.4; box-shadow: var(--sombra); }
+.aviso-flut[hidden] { display: none; }
+.zoom button[aria-busy="true"] .ic { animation: pulsa .8s ease-in-out infinite alternate; }
+
 @media (prefers-reduced-motion: reduce) {
   .carrega .contorno, .dot, .esq, .gt, .gota, .raio, .fl, .vt, .br, .c-n, .raios, .rs { animation: none !important; } .ceu.ani { animation: none; }
   .btn, .pil, .barra-p i, .grip .ic, .camadas button { transition: none; }
