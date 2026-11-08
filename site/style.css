@@ -217,6 +217,12 @@ a { color: inherit; text-underline-offset: 2px; }
 .rodape a { color: var(--on2); } .rodape b { color: var(--on); font-weight: 600; }
 
 .folha-alta .leg, .folha-alta .zoom { visibility: hidden; }
+/* folha do celular: tudo rola junto (o cabeçalho sai de cena e a lista ganha espaço); puxador e abas ficam presos no topo */
+.painel { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.painel[data-altura="baixo"] { overflow: hidden; }
+.painel > .grip { position: sticky; top: 0; z-index: 2; background: var(--s0); }
+.painel .abas { position: sticky; top: 28px; z-index: 2; background: var(--s0); }
+.painel .p-corpo { flex: none; overflow: visible; }
 
 /* ---------- computador (e celular deitado): uma coluna à esquerda, mapa no resto ---------- */
 @media (min-width: 900px), (orientation: landscape) and (min-width: 600px) and (max-height: 560px) {
@@ -224,6 +230,7 @@ a { color: inherit; text-underline-offset: 2px; }
   .marca b { display: inline; }
   .painel { top: 0; right: auto; bottom: var(--safe-b); width: var(--pw); height: auto !important; max-height: none; padding-top: calc(var(--safe-t) + 72px); border-top: 0; border-right: 1px solid var(--line2); border-radius: 0; box-shadow: none; transition: none; }
   .grip { display: none; }
+  .painel { overflow: hidden; } .painel .abas { position: static; } .painel .p-corpo { flex: 1; overflow-y: auto; }
   .p-cab { touch-action: auto; }
   .mapa, .mapa-ui { left: var(--pw); bottom: var(--safe-b); }
   .camadas { top: calc(var(--safe-t) + var(--e-4)); }

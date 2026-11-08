@@ -248,3 +248,25 @@ Gravidade:
 10. **P2:** tipografia, espaçamento, raios, tokens no cartão e textos.
 
 Depois de cada etapa: 375, 768 e 1440 nos dois temas, console sem erros e prints de 375 e 1440 na entrega.
+
+
+---
+
+## Situação após as correções (08/11/2026)
+
+| Item | Estado |
+|---|---|
+| P0-1 mapa lento | **Corrigido na parte medida.** Tiles vetoriais + esqueleto. PC local: dados na tela em 0,16 s (antes 1,4 s), baixados 1,5 MB (antes 3,8 MB), caminho crítico ~330 KB (antes ~924 KB). O primeiro desenho do mapa continua em ~3,7 s neste PC porque o MapLibre inicializa o WebGL; **a meta de 2,5 s em 4G NÃO foi comprovada** (sem limitação de rede aqui). |
+| P0-2 dados esperando o mapa | Corrigido (dados e índice saem juntos; falhas isoladas). |
+| P0-3 daltonismo | Corrigido: hachura (Grande perigo) e pontos (Perigo), cores por claridade. Reteste simulado: pares vizinhos de 1,6 a 2,2:1 só pela cor, e o padrão desfaz a ambiguidade. |
+| P0-4 contraste claro | Corrigido (≥ 3:1 nos elementos gráficos dos dois temas). |
+| P0-5 localização | Corrigido; testado com GPS simulado (negado, tempo, indisponível, fora do Brasil, Curitiba). |
+| P1-1 a P1-3 layout | Corrigido (coluna única, 71% de mapa, folha de 3 alturas, números em um lugar). |
+| P1-4, P1-5 cortes | Corrigido (0 textos cortados nas três larguras medidas). |
+| P1-6 estados de erro | Corrigido para alertas, mapa e notícias (com "Tentar de novo"). Falta o mesmo tratamento separado para GDACS/USGS, hoje dentro de notícias. |
+| P1-7 URL e voltar | Corrigido e testado. |
+| P1-8 busca | Corrigido e testado. |
+| P1-10 a P1-12 | Toque 44 px, `aria-live` só em mudanças reais, foco visível. |
+| P2 | Tipografia 12/14/16/24, espaçamento, raios, tokens e cartão feitos. Sobraram cores fixas de CSS do tema (definição dos próprios tokens) e o CSS dos anúncios. |
+
+Pendente: leitor de tela real, 4G real, celular físico (fluidez do WebGL), tema do sistema em 768 px claro (só o escuro foi visto), e revisão visual do cartão de município com aviso (só o nacional foi conferido).

@@ -340,7 +340,7 @@
   function folhaPara(h) {
     const p = $("#painel"), g = $("#grip");
     if (desk()) { p.style.height = ""; p.dataset.altura = ""; document.documentElement.style.removeProperty("--folha"); document.documentElement.classList.remove("folha-alta"); return; }
-    altura = h; const px = alturasFolha()[h]; p.style.height = px + "px"; p.dataset.altura = h;
+    altura = h; const px = alturasFolha()[h]; p.style.height = px + "px"; p.dataset.altura = h; if (h === "baixo") p.scrollTop = 0;
     document.documentElement.style.setProperty("--folha", px + "px");
     document.documentElement.classList.toggle("folha-alta", h === "alto");
     g.setAttribute("aria-expanded", String(h !== "baixo")); g.setAttribute("aria-label", h === "alto" ? "Recolher painel" : "Mostrar mais");
@@ -361,7 +361,7 @@
     if (folha() && altura === "baixo" && !lendoURL) folhaPara("meio");
     gravaURL(false);
     if (foco) $("#t-" + a).focus();
-    $("#pCorpo").scrollTop = 0;
+    $("#pCorpo").scrollTop = 0; if (folha()) { const p = $("#painel"), ab = $(".abas"); if (p.scrollTop > ab.offsetTop - 28) p.scrollTop = ab.offsetTop - 28; }
   }
   function ligaUI() {
     $("#filtros").addEventListener("click", (e) => {
@@ -380,7 +380,7 @@
     $("#zBr").addEventListener("click", () => { destaquePos = -1; mapa.setDestaque(null); seleciona(-1); mapa.resetar(); pintaAgora(); });
     $("#tema").addEventListener("click", alternaTema); atualizaIconeTema();
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (!document.documentElement.dataset.tema) recolore(); });
-    matchMedia(DESK).addEventListener("change", () => { folhaPara("baixo"); mapa.refit(); });
+    matchMedia(DESK).addEventListener("change", () => { folhaPara(altura); mapa.refit(); });
     document.addEventListener("keydown", (e) => { if (e.key === "/" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) { e.preventDefault(); abreBusca(); } });
     $("#aba-agora").addEventListener("wheel", (e) => { const p = e.target.closest(".pils"); if (p && p.scrollWidth > p.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { p.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false }); // roda do mouse rola a faixa de avisos na horizontal
     $("#painel").addEventListener("click", (e) => {
