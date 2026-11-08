@@ -4,7 +4,7 @@
 export const UA = "alertabr/1.0 (+https://github.com/carlosmirandd/alertabr)";
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function baixa(url, tipo = "json", tentativas = 4, limite = 45000) {
+export async function baixa(url, tipo = "json", tentativas = 3, limite = 25000) {
   let ultimo;
   for (let t = 0; t < tentativas; t++) {
     try {
