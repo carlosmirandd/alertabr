@@ -281,7 +281,7 @@
   function listaDoFeed(j) { // monta a ordem: o do município, depois o do estado, depois o do Brasil
     const t = tema, uf = sel >= 0 ? Math.floor(G.c[sel] / 100000) : 0, est = sel < 0 ? selUf : 0;
     const ok = (n) => t === "todos" || n.tm.includes(t), ate = Date.now() - 4 * 864e5;
-    const itens = (j.itens || []).filter((n) => ok(n) && n.d > ate);
+    const itens = (j.itens || []).filter((n) => ok(n) && n.d > ate && (sel >= 0 || !n.pv)); // previsão diária de cidade só aparece na visão da cidade
     const ev = (j.eventos || []).filter((e) => t === "outros" || (t === "todos" ? e.nv >= 2 : e.tm.includes(t) && e.nv >= 2));
     if (est) return { principal: semRepetidos([...ev.filter((e) => t === "outros"), ...itens.filter((n) => n.s.includes(est))].sort((a, b) => (b.nv || 0) - (a.nv || 0) || b.d - a.d)), extra: [] };
     if (sel < 0) return { principal: semRepetidos([...ev, ...itens].sort((a, b) => (b.nv || 0) - (a.nv || 0) || b.d - a.d)), extra: [] };

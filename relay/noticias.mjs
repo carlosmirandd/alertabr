@@ -29,12 +29,13 @@ const REGIAO = new Set("interior litoral governo regiao sul norte oeste leste ci
 const regiaoAntes = (w, i) => REGIAO.has(w[i - 1]) || (/^(de|do|da|no|na|em)$/.test(w[i - 1] || "") && (REGIAO.has(w[i - 2]) || w[i - 2] === "estado"));
 const palavras = (s) => sem(s).replace(/rio grande do (sul|norte)|mato grosso( do sul)?/g, (m) => "#" + m.replace(/ /g, "_")).replace(/[^a-z0-9#_]+/g, " ").trim().split(" ").filter(Boolean);
 // Municípios (e estados) citados no texto.
-export function localiza(titulo, resumo, ufFeed = 0) {
-  const txt = titulo + ". " + resumo, w = palavras(txt), norm = " " + w.join(" ") + " ";
-  const ufs = new Set(); if (ufFeed) ufs.add(ufFeed);
-  for (const [n, c] of ESTADOS) if (norm.includes(" " + n + " ")) ufs.add(c);
+// Lugares citados em UM texto. O estado do feed regional só ajuda a desempatar nomes repetidos; não entra no resultado.
+function achaLugares(txt, ufFeed) {
+  const txtOrig = txt, w = palavras(txt), norm = " " + w.join(" ") + " ", det = new Set(), ufs = new Set(); if (ufFeed) ufs.add(ufFeed);
+  const add = (c) => { ufs.add(c); det.add(c); };
+  for (const [n, c] of ESTADOS) if (norm.includes(" " + n + " ")) add(c);
   const FIXO = { "#rio_grande_do_sul": 43, "#rio_grande_do_norte": 24, "#mato_grosso": 51, "#mato_grosso_do_sul": 50 };
-  for (const m of norm.matchAll(/ (#[a-z_]+) /g)) if (FIXO[m[1]]) ufs.add(FIXO[m[1]]);
+  for (const m of norm.matchAll(/ (#[a-z_]+) /g)) if (FIXO[m[1]]) add(FIXO[m[1]]);
   const achados = new Set();
   for (let i = 0; i < w.length; i++) {
     for (let n = Math.min(6, w.length - i); n >= 1; n--) {
@@ -45,15 +46,22 @@ export function localiza(titulo, resumo, ufFeed = 0) {
       let esc = sigla ? cand.filter((x) => ufDe(x) === sigla) : [];
       if (esc.length !== 1) {
         if (AMBIGUO.has(nome)) { // só em feed regional do mesmo estado e escrito com a inicial maiúscula do original
-          const c1 = CAPITAIS.has(nome) ? cand.filter((x) => ufFeed && ufDe(x) === ufFeed && txt.includes(GEO.n[x])) : []; esc = c1.length === 1 && n === 1 ? c1 : [];
+          const c1 = CAPITAIS.has(nome) ? cand.filter((x) => ufFeed && ufDe(x) === ufFeed && txtOrig.includes(GEO.n[x])) : []; esc = c1.length === 1 && n === 1 ? c1 : [];
         } else if (cand.length === 1) esc = cand;
         else { const c2 = cand.filter((x) => ufs.has(ufDe(x))); esc = c2.length === 1 ? c2 : []; }
       }
       // o nome precisa aparecer com a mesma grafia/maiúsculas do original ("23 bezerros" não é Bezerros-PE) e não pode ser "estado de X", "interior de X"
-      if (esc.length === 1 && tira(txt).includes(tira(GEO.n[esc[0]])) && !regiaoAntes(w, i)) { achados.add(esc[0]); ufs.add(ufDe(esc[0])); i += n - 1; break; }
+      if (esc.length === 1 && tira(txtOrig).includes(tira(GEO.n[esc[0]])) && !regiaoAntes(w, i)) { achados.add(esc[0]); add(ufDe(esc[0])); i += n - 1; break; }
     }
   }
-  return { m: [...achados].slice(0, 4), s: [...ufs].filter(Boolean) };
+  return { m: [...achados].slice(0, 4), s: [...det].filter(Boolean) };
+}
+export function localiza(titulo, resumo, ufFeed = 0) {
+  const t = achaLugares(titulo, ufFeed);
+  if (t.m.length || t.s.length) return t; // o título manda
+  const r = achaLugares(resumo, ufFeed);
+  if (r.m.length > 3) return { m: [], s: ufFeed ? [ufFeed] : [] }; // resumo que lista várias cidades (previsão, balanço) não diz de onde é a notícia
+  return r.m.length || r.s.length ? r : { m: [], s: ufFeed ? [ufFeed] : [] }; // sem lugar no texto: vale o estado do feed regional
 }
 
 const decode = (s) => s.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (m, n) => String.fromCodePoint(+n)).replace(/&(amp|lt|gt|quot|apos|nbsp);/g, (m, e) => ({ amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " }[e]));
@@ -79,9 +87,11 @@ async function umFeed(f) {
   const lim = Date.now() - DIAS * 864e5, out = [];
   for (const it of leFeed(xml)) {
     if (it.d && it.d < lim) continue;
-    if (!f.semFiltro && !relevante(it.t, it.r)) continue;
+    const pv = /^previsao do tempo (hoje |para )/.test(sem(it.t)); // previsão diária de uma cidade (g1 publica ~45 por dia): só aparece na própria cidade e só a mais recente
+    if (pv && (!it.d || Date.now() - it.d > 30 * 36e5)) continue;
+    if (!f.semFiltro && !pv && !relevante(it.t, it.r)) continue;
     const tm = temasDe(it.t, it.r), loc = localiza(it.t, it.r, f.uf || 0);
-    out.push({ t: it.t.slice(0, 170), u: it.u, f: f.nome, d: it.d || Date.now(), tm: tm.length ? tm : ["geral"], m: loc.m, s: loc.s, ...(f.oficial ? { o: 1 } : {}) });
+    out.push({ t: it.t.slice(0, 170), u: it.u, f: f.nome, d: it.d || Date.now(), tm: tm.length ? tm : ["geral"], m: loc.m, s: loc.s, ...(f.oficial ? { o: 1 } : {}), ...(pv ? { pv: 1 } : {}) });
   }
   return out;
 }
@@ -128,8 +138,8 @@ export async function coletaNoticias(previo = null) {
   const porUrl = new Map(); for (const it of todas) if (!porUrl.has(it.u)) porUrl.set(it.u, it);
   const grupos = [];
   for (const it of [...porUrl.values()].sort((a, b) => (b.o || 0) - (a.o || 0) || b.d - a.d)) {
-    const tk = toks(it.t), g = grupos.find((x) => jac(x.tk, tk) > 0.55);
-    if (g) { g.n++; for (const k of it.m) if (!g.m.includes(k)) g.m.push(k); for (const k of it.s) if (!g.s.includes(k)) g.s.push(k); } else grupos.push({ ...it, tk, n: 1 });
+    const tk = toks(it.t), mesmo = (a, b) => a.length === b.length && a.every((x) => b.includes(x)), g = grupos.find((x) => jac(x.tk, tk) > 0.55 && mesmo(x.m, it.m) && mesmo(x.s, it.s)); // só junta títulos parecidos que falam dos MESMOS lugares
+    if (g) g.n++; else grupos.push({ ...it, tk, n: 1 });
   }
   const itens = grupos.sort((a, b) => b.d - a.d).slice(0, MAX).map(({ tk, ...x }) => x);
   const ev = await Promise.allSettled([gdacs(), usgs()]);
