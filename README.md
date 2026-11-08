@@ -100,7 +100,7 @@ O relay também publica `noticias.json` (no mesmo bucket do `estado.json`):
 Tudo vem desligado. Para ligar, edite `ADS` em `site/config.js` (`cliente`, `slotDesk` 728×90 e `slotMovel` 320×50) e o ID em `site/ads.txt`. Para só ver o espaço, abra o site com `?ads=demo`.
 
 - Uma faixa fixa no rodapé, separada do mapa e dos botões (o CSS reserva o espaço, nada fica por baixo).
-- Banner de consentimento: nada do Google carrega antes da escolha. "Aceitar" = personalizados; "Sem personalização" = contextuais.
+- O script do AdSense está no `<head>` do `index.html` (carrega na abertura). Um aviso curto, que não bloqueia nada, deixa a pessoa pedir anúncios "Sem personalização" (a página recarrega e passa a pedir só contextuais).
 - Páginas `sobre.html` e `privacidade.html` (revise o texto com quem cuida da parte jurídica antes de divulgar).
 
 ## Publicar (Cloudflare)
