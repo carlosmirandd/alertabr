@@ -299,7 +299,7 @@
       const ap = local ? a.filter((n) => norm(n.t).includes(norm(nome))) : a;
       let lista = semRepetidos(local ? [...f.principal, ...ap] : [...f.principal, ...a].sort((x, y) => (y.nv || 0) - (x.nv || 0) || y.d - x.d));
       let aviso = "";
-      if (local && lista.length < 3) aviso = `<p class="vazio esq">${lista.length ? "Poucas notícias" : "Nenhuma notícia recente"} sobre ${esc(nome)}.</p><button type="button" class="btn sec" style="margin:4px" data-uf="${codUf(sel)}">Ver notícias de ${esc(NOME_UF[codUf(sel)])}</button>`; // sem misturar com outras cidades
+      if (local && !lista.length) aviso = `<p class="vazio esq">Nenhuma notícia recente sobre ${esc(nome)}.</p><button type="button" class="btn sec" style="margin:4px" data-uf="${codUf(sel)}">Ver notícias de ${esc(NOME_UF[codUf(sel)])}</button>`; // sem misturar com outras cidades
       lista = lista.slice(0, 15);
       if ((feed === undefined || api === undefined) && !lista.length) return; // espera o outro lado antes de dizer que não há nada
       const falhou = feed === null && (api === null || (api && api.erro));
