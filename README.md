@@ -15,7 +15,7 @@ Em desastres, a informação oficial fica espalhada entre INMET, INPE, Defesa Ci
 | Peça | Onde | O que faz |
 |---|---|---|
 | **Relay** | `relay/` | Lê INMET e INPE, cruza com os códigos IBGE e publica **um** `estado.json` compacto (~100 KB). Mantém o último dado bom de cada fonte se uma cair. |
-| **Mapa** | `site/mapa-gl.js` (WebGL), `site/mapa.js` (reserva em canvas), `geo/` | Mapa por município: zoom, arrastar, pinça, clique, busca, nomes de cidades, camadas Alertas / Focos de calor. A malha vem do IBGE e é simplificada por `geo/build_geo.py` com divisas compartilhadas (sem frestas). |
+| **Mapa** | `site/mapa-gl.js` (WebGL), `site/mapa.js` (reserva em canvas), `geo/` | Mapa por município: zoom, arrastar, pinça, clique, busca, nomes de cidades, camadas Alertas / Focos de calor. A malha vem do IBGE, é simplificada por `geo/build_geo.py` e vira tiles vetoriais estáticos com `geo/tiles.mjs`: o navegador baixa só os pedaços visíveis. |
 | **Radar de notícias** | `functions/api/noticias.js` | Busca no Google Notícias por município e tema, junta títulos parecidos, cache de 10 min na borda. |
 | **Cartões** | `site/cartao.js` | PNG 1080×1080 (post) ou 1080×1920 (stories) desenhado no navegador, com o contorno do município, risco, o que fazer e a fonte. |
 
@@ -65,7 +65,8 @@ Para atualizar mais rápido (mínimo 60 s), defina `INTERVALO`. No PowerShell: `
 |---|---|
 | `npm run dev -- 3000` | usar outra porta |
 | `npm test` | testes rápidos (sem dependências) |
-| `npm run geo` | refaz a malha dos municípios a partir do IBGE (Python 3; cache em `geo/.cache`) |
+| `npm run geo` | refaz a malha dos municípios a partir do IBGE (Python 3; cache em `geo/.cache`) e depois os tiles |
+| `npm run tiles` | gera os tiles vetoriais do mapa (`site/tiles/`), o índice leve `site/data/mun.json` e o contorno do esqueleto no `index.html` (precisa de `npm install` uma vez) |
 | `npx wrangler pages dev site` | testar com o ambiente real da Cloudflare (funções), se você tiver o wrangler |
 
 As **notícias** funcionam no `npm run dev`: ele executa a mesma função de `functions/api/noticias.js`. Se você hospedar a pasta `site/` em um servidor estático qualquer (sem funções), tudo funciona, menos a aba Notícias.

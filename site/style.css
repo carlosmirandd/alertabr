@@ -52,7 +52,15 @@ a { color: inherit; text-underline-offset: 2px; }
 .mapa .maplibregl-canvas { outline: none; }
 .mapa-cv { position: absolute; left: 0; top: 0; will-change: transform; }
 .mapa-topo, .mapa-prev { pointer-events: none; } .mapa-prev { opacity: 0; }
-.carrega { position: absolute; inset: 0; display: grid; place-items: center; color: var(--on3); pointer-events: none; font-weight: 600; } .carrega.ok { display: none; }
+/* esqueleto do mapa: contorno do Brasil (embutido no HTML, aparece no primeiro quadro) até o mapa desenhar */
+.carrega { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 96px 24px 40vh; color: var(--on2); pointer-events: none; font-weight: 600; font-size: 14px; text-align: center; background: var(--map-sea); transition: opacity .3s; }
+.carrega.ok { opacity: 0; visibility: hidden; transition: opacity .3s, visibility 0s .3s; }
+.carrega .contorno { width: min(72vw, 460px); max-height: 46vh; fill: none; stroke: var(--on3); stroke-width: 1.6; stroke-linejoin: round; vector-effect: non-scaling-stroke; animation: pulsa 1.6s ease-in-out infinite alternate; }
+@keyframes pulsa { from { opacity: .35; } to { opacity: .8; } }
+.carrega.erro { pointer-events: auto; } .carrega.erro .contorno { animation: none; opacity: .3; }
+.carrega.erro #carregaTxt { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 320px; color: var(--on); }
+@media (min-width: 1000px) and (min-height: 560px) { .carrega { padding: 220px 380px 60px; } }
+.estado-msg p { margin: 0 0 12px; color: var(--on2); line-height: 1.45; } .estado-msg b { color: var(--on); }
 .tip { position: absolute; left: 0; top: 0; pointer-events: none; min-width: 200px; max-width: 290px; background: var(--mat); border: 1px solid var(--line2); border-radius: 18px; padding: 12px 14px; font-size: 13px; z-index: 50; box-shadow: var(--sombra); }
 .tip-t { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; } .tip-t b { font-size: 17px; letter-spacing: -.01em; } .tip-t span { color: var(--on3); font-weight: 700; }
 .tip-l { display: flex; align-items: center; gap: 4px; margin-top: 5px; color: var(--on2); } .tip-s { color: var(--on3); margin-top: 5px; } .tip-d { border-top: 1px solid var(--line); padding-top: 7px; margin-top: 9px; font-size: 12px; }
@@ -314,6 +322,6 @@ html.com-ads { --safe-b: calc(env(safe-area-inset-bottom, 0px) + var(--ad-h)); }
 @media (max-height: 559px) and (orientation: landscape) { .crumbs { display: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .dot, .esq, .gt, .gota, .raio, .fl, .vt, .br, .c-n, .raios, .rs { animation: none !important; } .ceu.ani { animation: none; }
+  .carrega .contorno, .dot, .esq, .gt, .gota, .raio, .fl, .vt, .br, .c-n, .raios, .rs { animation: none !important; } .ceu.ani { animation: none; }
   .btn, .pil, .barra-p i, .grip .ic, .camadas button { transition: none; }
 }

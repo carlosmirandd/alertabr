@@ -2,6 +2,11 @@
   Cache-Control: public, max-age=86400
 /data/estados.json
   Cache-Control: public, max-age=86400
+/data/mun.json
+  Cache-Control: public, max-age=86400
+/tiles/*
+  Cache-Control: public, max-age=604800
+  Content-Type: application/x-protobuf
 /data/estado.json
   Cache-Control: public, max-age=60
 /sw.js
