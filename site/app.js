@@ -6,8 +6,8 @@
   let COR_SEV = {}, COR_FOGO = [];
   function lerCores() { // as cores do mapa vêm das variáveis CSS do tema atual (claro/escuro)
     const cs = getComputedStyle(document.documentElement), v = (n) => cs.getPropertyValue(n).trim();
-    COR_SEV = { 0: v("--map-neutro"), 1: v("--s-1"), 2: v("--s-2"), 3: v("--s-3") };
-    COR_FOGO = [v("--map-neutro"), "#ffc27a", "#ff9a3c", "#f2641a", "#c8311a", "#7d1410"]; // 0, 1, 2-3, 4-9, 10-24, 25+
+    COR_SEV = { 0: v("--sev-nenhum"), 1: v("--sev-potencial"), 2: v("--sev-perigo"), 3: v("--sev-grande") };
+    COR_FOGO = [v("--sev-nenhum"), v("--fogo-1"), v("--fogo-2"), v("--fogo-3"), v("--fogo-4"), v("--fogo-5")]; // 0, 1, 2-3, 4-9, 10-24, 25+
   }
   lerCores();
   const fmt = (n) => Number(n || 0).toLocaleString("pt-BR");
@@ -54,7 +54,7 @@
     ciclo();
   }
   function criaMapa() {
-    const op = { cor: corDe, aoClicar: aoClicar, aoPassar: aoPassar, insets: insets, capitais: CAPITAIS, aoPronto: () => { $("#carrega").classList.add("ok"); const ok = () => mapa.carregaFormas().then(() => { if (sel >= 0) pintaCartao(); }).catch(() => {}); if (window.requestIdleCallback) requestIdleCallback(ok, { timeout: 4000 }); else setTimeout(ok, 1500); }, aoErro: () => erroMapa("Não foi possível carregar o mapa. Verifique a conexão.") };
+    const op = { cor: corDe, padrao: padraoDe, aoClicar: aoClicar, aoPassar: aoPassar, insets: insets, capitais: CAPITAIS, aoPronto: () => { $("#carrega").classList.add("ok"); const ok = () => mapa.carregaFormas().then(() => { if (sel >= 0) pintaCartao(); }).catch(() => {}); if (window.requestIdleCallback) requestIdleCallback(ok, { timeout: 4000 }); else setTimeout(ok, 1500); }, aoErro: () => erroMapa("Não foi possível carregar o mapa. Verifique a conexão.") };
     if (window.MapaGL && window.MapaGL.suportado()) { mapa = new window.MapaGL($("#mapa"), G, null, op); return; }
     // sem WebGL: mapa em canvas, que precisa da geometria completa (mais pesada)
     mapa = { setCor() {}, setDestaque() {}, setSel() {}, zoomPara() {}, zoomLista() {}, zoomMais() {}, resetar() {}, refit() {}, forma: () => null, carregaFormas: () => Promise.reject(), w: 0, h: 0 };
@@ -126,10 +126,11 @@
   }
 
   // ---------- cores e legenda ----------
+  function padraoDe(i) { if (!D || camada !== "alertas") return 0; const s = D.s[i]; return filtroSev && s !== filtroSev ? 0 : s >= 2 ? s : 0; }
   function corDe(i) { if (!D) return COR_SEV[0]; if (camada === "alertas") { const s = D.s[i]; return filtroSev && s !== filtroSev ? COR_SEV[0] : COR_SEV[s]; } return COR_FOGO[balde(D.f[i])]; }
   function legenda() {
-    const l = $("#leg"), li = (c, t) => `<div><i style="background:${c}"></i>${t}</div>`;
-    l.innerHTML = camada === "alertas" ? li(COR_SEV[3], "Grande perigo") + li(COR_SEV[2], "Perigo") + li(COR_SEV[1], "Perigo potencial") + li(COR_SEV[0], "Sem aviso hoje")
+    const l = $("#leg"), li = (c, t, p) => `<div><i class="${p || ""}" style="background-color:${c}"></i>${t}</div>`;
+    l.innerHTML = camada === "alertas" ? li(COR_SEV[3], "Grande perigo", "pad-3") + li(COR_SEV[2], "Perigo", "pad-2") + li(COR_SEV[1], "Perigo potencial") + li(COR_SEV[0], "Sem aviso hoje")
       : li(COR_FOGO[5], "25+ focos") + li(COR_FOGO[4], "10 a 24") + li(COR_FOGO[3], "4 a 9") + li(COR_FOGO[2], "2 a 3") + li(COR_FOGO[1], "1 foco") + li(COR_FOGO[0], "nenhum (24 h)");
   }
 
@@ -142,7 +143,7 @@
       let h = `<div class="tip-t"><b>${esc(G.n[i])}</b><span>${ufDe(i)}</span></div>`;
       if (D) {
         const al = alertasDe(i).filter((x) => x.h === 0).sort((x, y) => y.sev - x.sev), foc = D.f[i];
-        h += al.length ? al.slice(0, 2).map((x) => `<div class="tip-l"><span class="tag" style="--c:${esc(x.cor)}">${NOME_SEV[x.sev] || ""}</span>${esc(x.t)}</div>`).join("") + (al.length > 2 ? `<div class="tip-s">+${al.length - 2} aviso${al.length > 3 ? "s" : ""}</div>` : "") : '<div class="tip-s">Sem aviso do INMET hoje</div>';
+        h += al.length ? al.slice(0, 2).map((x) => `<div class="tip-l"><span class="tag sev-${x.sev}">${NOME_SEV[x.sev] || ""}</span>${esc(x.t)}</div>`).join("") + (al.length > 2 ? `<div class="tip-s">+${al.length - 2} aviso${al.length > 3 ? "s" : ""}</div>` : "") : '<div class="tip-s">Sem aviso do INMET hoje</div>';
         h += `<div class="tip-l"><b style="color:var(--fogo)">${fmt(foc)}</b>&nbsp;foco${foc === 1 ? "" : "s"} de calor em 24 h</div>`;
       }
       tip.innerHTML = h + '<div class="tip-s tip-d">Clique para ver detalhes</div>';
@@ -247,7 +248,7 @@
     const lim = el.clientHeight - 12; for (const n of it) if (n.offsetTop + n.offsetHeight > lim) n.hidden = true;
   }
   let tr = 0; addEventListener("resize", () => { clearTimeout(tr); tr = setTimeout(() => { cabeLista(); cabeNoticias(); }, 120); });
-  const linhaAviso = ([a, p]) => `<div class="rw${p === destaquePos ? " on" : ""}" style="--c:${esc(a.cor)}" data-alerta="${p}" tabindex="0" role="button"><i></i><span>${esc(a.t)}<small>${NOME_SEV[a.sev] || ""} · ${esc(a.uf)}</small></span><b>${fmt(a.n)}</b></div>`;
+  const linhaAviso = ([a, p]) => `<div class="rw sev-${a.sev}${p === destaquePos ? " on" : ""}" data-alerta="${p}" tabindex="0" role="button"><i></i><span>${esc(a.t)}<small>${NOME_SEV[a.sev] || ""} · ${esc(a.uf)}</small></span><b>${fmt(a.n)}</b></div>`;
   function brasil() {
     const cod = selUf, nomeR = cod ? NOME_UF[cod] : "Brasil", r = resumoBr(cod), tot = r.tot, soma = r.sev[1] + r.sev[2] + r.sev[3];
     // no estado, cada aviso conta só os municípios daquele estado
@@ -280,7 +281,7 @@
       blocos: [["Gravidade", at ? SEV_CURTO[at.sev] : "–"], ["Focos 24h", fmt(foc)], ["Potência", D.frp[i] ? fmt(D.frp[i]) + " <small>MW</small>" : "–"]],
       pils: pos.map((p) => ({ a: D.alertas[p], pos: p, on: p === ativoPos, txt: D.alertas[p].h ? diaTxt(D.alertas[p].ini) : SEV_CURTO[D.alertas[p].sev] })),
     });
-    const det = at ? `<div class="card" style="--c:${esc(at.cor)}"><h4><span>${esc(at.t)}</span><small>${at.h ? diaTxt(at.ini) : "hoje"}</small></h4><p><span class="tag">${NOME_SEV[at.sev] || ""}</span>${janela(at.ini)} → ${janela(at.fim)}</p>${at.r[0] ? `<p class="clamp3">${esc(at.r[0])}</p>` : ""}${at.i.length ? `<div class="instr"><b>O que fazer:</b> <span class="clamp2">${esc(at.i.slice(0, 2).join(" "))}</span></div>` : ""}</div>` : '<p class="vazio">Nenhum aviso do INMET ativo para este município.</p>';
+    const det = at ? `<div class="card sev-${at.sev}"><h4><span>${esc(at.t)}</span><small>${at.h ? diaTxt(at.ini) : "hoje"}</small></h4><p><span class="tag">${NOME_SEV[at.sev] || ""}</span>${janela(at.ini)} → ${janela(at.fim)}</p>${at.r[0] ? `<p class="clamp3">${esc(at.r[0])}</p>` : ""}${at.i.length ? `<div class="instr"><b>O que fazer:</b> <span class="clamp2">${esc(at.i.slice(0, 2).join(" "))}</span></div>` : ""}</div>` : '<p class="vazio">Nenhum aviso do INMET ativo para este município.</p>';
     return c + `<section class="detalhe">${det}<div class="fila"><button class="btn" data-ir="cartao">Gerar cartão</button><button class="btn sec" data-ir="noticias">Notícias</button><button class="btn sec" data-uf="${codUf(i)}">Estado ${ufDe(i)}</button><button class="btn sec" data-limpa="1">Brasil</button></div></section>`;
   }
 

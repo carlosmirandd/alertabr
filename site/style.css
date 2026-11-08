@@ -10,8 +10,8 @@
   --ac: #d98a00; --ac-c: #ffe3ad;
   --mat: rgba(250,248,244,.95);
   --sombra: 0 1px 2px rgba(60,40,10,.1), 0 8px 24px rgba(60,40,10,.12);
-  --map-sea: #e9e5dc; --map-neutro: #d9d3c7; --map-dim: #e6e1d6; --map-uf: rgba(29,26,22,.55); --map-borda: rgba(255,255,255,.75); --map-rot: #1d1a16; --map-halo: rgba(255,255,255,.92);
-  --s-1: #f2c200; --s-2: #f28c00; --s-3: #e5231c; --fogo: #e8590c; --ok: #1f9d55;
+  --map-sea: #d8d3c8; --map-dim: #ece8e0; --map-uf: rgba(29,26,22,.55); --map-borda: rgba(255,255,255,.75); --map-rot: #1d1a16; --map-halo: rgba(255,255,255,.92);
+  --sev-nenhum: #fbf9f4; --sev-potencial: #b38700; --sev-perigo: #b04a00; --sev-grande: #6f0d12; --sev-potencial-tx: #fff; --sev-perigo-tx: #fff; --sev-grande-tx: #fff; --sev-padrao: rgba(255,255,255,.55); --fogo-1: #f6c48a; --fogo-2: #e98a3c; --fogo-3: #c8561a; --fogo-4: #93290f; --fogo-5: #5a1208; --fogo: #c8561a; --ok: #1f7a45;
   --r-card: 24px; --r-pill: 999px;
   --ease: cubic-bezier(.2, 0, 0, 1); --ease-out: cubic-bezier(.05, .7, .1, 1);
   --fonte: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
@@ -24,8 +24,8 @@
     --on: #f4efe8; --on2: #cbc4b9; --on3: #988f82; --line: rgba(255,245,230,.1); --line2: rgba(255,245,230,.18);
     --ac: #f5a524; --ac-c: #4a3200; --mat: rgba(25,22,19,.95);
     --sombra: 0 1px 2px rgba(0,0,0,.5), 0 10px 28px rgba(0,0,0,.45);
-    --map-sea: #100e0c; --map-neutro: #2a2622; --map-dim: #1a1815; --map-uf: rgba(250,246,240,.5); --map-borda: rgba(16,14,12,.55); --map-rot: #faf6f0; --map-halo: rgba(16,14,12,.9);
-    --s-1: #ffd60a; --s-2: #ff9900; --s-3: #f80703; --fogo: #ff7a1a; --ok: #3dd68c;
+    --map-sea: #0e0c0b; --map-dim: #1a1815; --map-uf: rgba(250,246,240,.5); --map-borda: rgba(16,14,12,.55); --map-rot: #faf6f0; --map-halo: rgba(16,14,12,.9);
+    --sev-nenhum: #2f2a25; --sev-potencial: #ffe066; --sev-perigo: #f5902a; --sev-grande: #e8392c; --sev-potencial-tx: #1d1a16; --sev-perigo-tx: #1d1a16; --sev-grande-tx: #fff; --sev-padrao: rgba(14,12,11,.6); --fogo-1: #6b3a1c; --fogo-2: #a4501d; --fogo-3: #e0701f; --fogo-4: #ff9a3c; --fogo-5: #ffd08a; --fogo: #ff7a1a; --ok: #3dd68c;
   }
 }
 :root[data-tema="escuro"] {
@@ -33,8 +33,8 @@
   --on: #f4efe8; --on2: #cbc4b9; --on3: #988f82; --line: rgba(255,245,230,.1); --line2: rgba(255,245,230,.18);
   --ac: #f5a524; --ac-c: #4a3200; --mat: rgba(25,22,19,.95);
   --sombra: 0 1px 2px rgba(0,0,0,.5), 0 10px 28px rgba(0,0,0,.45);
-  --map-sea: #100e0c; --map-neutro: #2a2622; --map-dim: #1a1815; --map-uf: rgba(250,246,240,.5); --map-borda: rgba(16,14,12,.55); --map-rot: #faf6f0; --map-halo: rgba(16,14,12,.9);
-  --s-1: #ffd60a; --s-2: #ff9900; --s-3: #f80703; --fogo: #ff7a1a; --ok: #3dd68c;
+  --map-sea: #0e0c0b; --map-dim: #1a1815; --map-uf: rgba(250,246,240,.5); --map-borda: rgba(16,14,12,.55); --map-rot: #faf6f0; --map-halo: rgba(16,14,12,.9);
+  --sev-nenhum: #2f2a25; --sev-potencial: #ffe066; --sev-perigo: #f5902a; --sev-grande: #e8392c; --sev-potencial-tx: #1d1a16; --sev-perigo-tx: #1d1a16; --sev-grande-tx: #fff; --sev-padrao: rgba(14,12,11,.6); --fogo-1: #6b3a1c; --fogo-2: #a4501d; --fogo-3: #e0701f; --fogo-4: #ff9a3c; --fogo-5: #ffd08a; --fogo: #ff7a1a; --ok: #3dd68c;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; margin: 0; overscroll-behavior: none; }
@@ -111,10 +111,10 @@ a { color: inherit; text-underline-offset: 2px; }
 .st:hover { background: color-mix(in srgb, var(--on) 11%, transparent); }
 .st span { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--on2); white-space: nowrap; } .st i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; } .st em { font-style: normal; display: none; }
 .st b { display: block; font: 700 25px/1.1 var(--fonte); letter-spacing: -.02em; margin-top: 2px; }
-.st.s3 { --c: var(--s-3); } .st.s2 { --c: var(--s-2); } .st.s1 { --c: var(--s-1); } .st.fg { --c: var(--fogo); }
+.st.s3 { --c: var(--sev-grande); } .st.s2 { --c: var(--sev-perigo); } .st.s1 { --c: var(--sev-potencial); } .st.fg { --c: var(--fogo); }
 .st[aria-pressed="true"] { border-color: var(--on); background: color-mix(in srgb, var(--on) 12%, transparent); }
 .barra-p { display: flex; height: 6px; margin-top: 12px; border-radius: var(--r-pill); overflow: hidden; background: color-mix(in srgb, var(--on) 10%, transparent); }
-.barra-p i { display: block; height: 100%; transition: width .9s var(--ease); } .barra-p .b3 { background: var(--s-3); } .barra-p .b2 { background: var(--s-2); } .barra-p .b1 { background: var(--s-1); }
+.barra-p i { display: block; height: 100%; transition: width .9s var(--ease); } .barra-p .b3 { background: var(--sev-grande); } .barra-p .b2 { background: var(--sev-perigo); } .barra-p .b1 { background: var(--sev-potencial); }
 
 /* legenda e zoom ficam na área livre, nunca por cima de cartões */
 .leg { grid-area: livre; justify-self: start; align-self: end; background: var(--mat); border: 1px solid var(--line2); border-radius: 18px; padding: 10px 12px; display: grid; gap: 5px; font-size: 12px; font-weight: 500; pointer-events: none; box-shadow: var(--sombra); }
@@ -133,10 +133,10 @@ h3 { margin: 0 0 8px; font-size: 11.5px; letter-spacing: .06em; text-transform: 
 .rw i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); } .rw span { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .rw span small { display: block; font-weight: 500; font-size: 11.5px; color: var(--on3); overflow: hidden; text-overflow: ellipsis; } .rw b { font-size: 13px; color: var(--on2); }
 .mais { width: 100%; margin-top: 4px; min-height: 36px; background: none; border: 0; color: var(--on2); font-weight: 600; font-size: 13px; border-radius: 12px; } .mais:hover { background: color-mix(in srgb, var(--on) 8%, transparent); }
 .mais-n { padding: 4px 8px 0; font-size: 12px; color: var(--on3); }
-.card { background: color-mix(in srgb, var(--on) 6%, transparent); border-left: 4px solid var(--c, var(--ac)); border-radius: 16px; padding: 10px 12px; margin: 0; }
+.card { background: color-mix(in srgb, var(--on) 6%, transparent); border-radius: 16px; padding: 10px 12px; margin: 0; }
 .card h4 { margin: 0; display: flex; justify-content: space-between; gap: 8px; font-size: 14px; } .card h4 small { font-weight: 500; color: var(--on3); white-space: nowrap; }
 .card p { margin: 4px 0 0; color: var(--on2); font-size: 12.5px; }
-.tag { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: var(--r-pill); background: var(--c, var(--ac)); color: #17130e; margin-right: 6px; }
+.tag { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: var(--r-pill); background: var(--c, var(--ac)); color: var(--ctx, #17130e); margin-right: 6px; }
 .fila { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; }
 .btn { min-height: 40px; background: var(--on); color: var(--s0); border: 0; border-radius: var(--r-pill); padding: 0 18px; font-weight: 700; font-size: 13.5px; transition: transform .2s var(--ease), opacity .2s; } .btn:hover { transform: translateY(-1px); }
 .btn.sec { background: color-mix(in srgb, var(--on) 8%, transparent); color: var(--on); border: 1px solid var(--line2); } .btn:disabled { opacity: .4; cursor: default; }
@@ -320,6 +320,13 @@ html.com-ads { --safe-b: calc(env(safe-area-inset-bottom, 0px) + var(--ad-h)); }
 .crumbs { display: flex; align-items: center; gap: 2px; margin: 0 0 1px -4px; font-size: 12px; color: var(--on3); } .crumbs[hidden] { display: none; }
 .crumbs button { background: none; border: 0; padding: 0 4px; min-height: 26px; color: var(--on2); font: inherit; font-weight: 600; cursor: pointer; border-radius: 8px; } .crumbs button:hover { background: color-mix(in srgb, var(--on) 10%, transparent); text-decoration: underline; } .crumbs b { padding: 0 4px; color: var(--on); }
 @media (max-height: 559px) and (orientation: landscape) { .crumbs { display: none; } }
+
+/* gravidade: cor + padrão (a cor nunca é o único sinal). Mesmos padrões do mapa. */
+.sev-1 { --c: var(--sev-potencial); --ctx: var(--sev-potencial-tx); } .sev-2 { --c: var(--sev-perigo); --ctx: var(--sev-perigo-tx); } .sev-3 { --c: var(--sev-grande); --ctx: var(--sev-grande-tx); }
+.pad-3 { background-image: repeating-linear-gradient(135deg, var(--sev-padrao) 0 1.5px, transparent 1.5px 4px) !important; }
+.pad-2 { background-image: radial-gradient(var(--sev-padrao) 1px, transparent 1.3px) !important; background-size: 4px 4px !important; }
+.rw.sev-3 > i, .st.s3 i { background-image: repeating-linear-gradient(135deg, var(--sev-padrao) 0 1.5px, transparent 1.5px 4px); } .rw.sev-2 > i, .st.s2 i { background-image: radial-gradient(var(--sev-padrao) 1px, transparent 1.3px); background-size: 4px 4px; }
+.rw i, .st i, .leg i { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on) 22%, transparent); }
 
 @media (prefers-reduced-motion: reduce) {
   .carrega .contorno, .dot, .esq, .gt, .gota, .raio, .fl, .vt, .br, .c-n, .raios, .rs { animation: none !important; } .ceu.ani { animation: none; }

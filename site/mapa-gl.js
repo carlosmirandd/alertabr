@@ -54,14 +54,14 @@
       });
       const m = this.map; m.touchZoomRotate.disableRotation(); m.keyboard.disableRotation();
       m.on("load", () => this.montaCamadas());
-      m.on("error", (e) => { if (!this.carregou && this.op.aoErro && !this.avisou) { this.avisou = true; this.op.aoErro(e && e.error); } }); // falha antes de o mapa aparecer (ex.: tiles fora do ar)
+      m.on("error", (e) => { console.warn("mapa:", e && e.error ? e.error.message : e); if (!this.carregou && this.op.aoErro && !this.avisou) { this.avisou = true; this.op.aoErro(e && e.error); } }); // falha antes de o mapa aparecer (ex.: tiles fora do ar)
       m.on("dragstart", () => { this.fitBrasil = false; }); m.on("zoomstart", (e) => { if (e.originalEvent) this.fitBrasil = false; });
       m.on("mousemove", (e) => this.passa(e)); m.getCanvas().addEventListener("mouseleave", () => this.passa(null));
       m.on("click", (e) => { const f = m.queryRenderedFeatures(e.point, { layers: ["mun-fill"] })[0]; if (this.op.aoClicar) this.op.aoClicar(f ? this.idx.get(f.id) : -1, e.originalEvent); });
       this.ro = new ResizeObserver(() => { if (this.fitBrasil && this.pronto) this.resetar(true); }); this.ro.observe(el);
     }
     get w() { return this.el.clientWidth; } get h() { return this.el.clientHeight; }
-    cores() { const cs = getComputedStyle(this.el), V = (n, d) => cs.getPropertyValue(n).trim() || d; return { sea: V("--map-sea", "#100e0c"), neutro: V("--map-neutro", "#2a2622"), dim: V("--map-dim", "#1a1815"), uf: V("--map-uf", "rgba(250,246,240,.5)"), borda: V("--map-borda", "rgba(16,14,12,.55)"), rot: V("--map-rot", "#fff"), halo: V("--map-halo", "rgba(16,14,12,.9)"), sel: V("--on", "#fff") }; }
+    cores() { const cs = getComputedStyle(this.el), V = (n, d) => cs.getPropertyValue(n).trim() || d; return { sea: V("--map-sea", "#100e0c"), neutro: V("--sev-nenhum", "#2f2a25"), padrao: V("--sev-padrao", "rgba(14,12,11,.6)"), dim: V("--map-dim", "#1a1815"), uf: V("--map-uf", "rgba(250,246,240,.5)"), borda: V("--map-borda", "rgba(16,14,12,.55)"), rot: V("--map-rot", "#fff"), halo: V("--map-halo", "rgba(16,14,12,.9)"), sel: V("--on", "#fff") }; }
     padding() { const i = this.op.insets ? this.op.insets() : null; return i ? { left: i.l, right: i.r, top: i.t, bottom: i.b } : { left: 0, right: 0, top: 0, bottom: 0 }; }
     montaCamadas() {
       const m = this.map, c = this.cores(), fonte = ["Open Sans Semibold"];
@@ -70,6 +70,9 @@
       m.addSource("rot", { type: "geojson", data: this.dados.rot, maxzoom: 8 });
       m.addSource("ufr", { type: "geojson", data: this.dados.ufr });
       m.addLayer({ id: "mun-fill", type: "fill", source: "mun", "source-layer": "mun", paint: { "fill-color": ["coalesce", ["feature-state", "cor"], c.neutro], "fill-color-transition": { duration: 600 }, "fill-antialias": true } });
+      this.padroes(c.padrao);
+      m.addLayer({ id: "mun-hachura", type: "fill", source: "mun", "source-layer": "mun", paint: { "fill-pattern": "hachura", "fill-opacity": ["case", ["==", ["feature-state", "p"], 3], 1, 0] } });
+      m.addLayer({ id: "mun-pontos", type: "fill", source: "mun", "source-layer": "mun", paint: { "fill-pattern": "pontos", "fill-opacity": ["case", ["==", ["feature-state", "p"], 2], 1, 0] } });
       // costura: contorno de ~1 px na MESMA cor do município cobre as frestas que a simplificação dos tiles abre entre vizinhos
       m.addLayer({ id: "mun-costura", type: "line", source: "mun", "source-layer": "mun", layout: { "line-join": "round" }, paint: { "line-color": ["coalesce", ["feature-state", "cor"], c.neutro], "line-color-transition": { duration: 600 }, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.9, 8, 1.2] } });
       m.addLayer({ id: "mun-line", type: "line", source: "mun", "source-layer": "mun", minzoom: 5, paint: { "line-color": c.borda, "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.25, 9, 0.7, 12, 1.2], "line-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0, 6.5, 1] } });
@@ -81,12 +84,21 @@
       this.pronto = true; this.recolore(); this.setSel(this.sel);
       m.once("idle", () => { // tile que não chega (404, offline) não gera erro no MapLibre: confere se algum município foi desenhado
         this.carregou = true;
-        if (!m.querySourceFeatures("mun", { sourceLayer: "mun" }).length) { if (this.op.aoErro && !this.avisou) { this.avisou = true; this.op.aoErro(); } return; }
-        if (this.op.aoPronto) this.op.aoPronto();
+        const tem = () => m.querySourceFeatures("mun", { sourceLayer: "mun" }).length > 0;
+        if (tem()) { if (this.op.aoPronto) this.op.aoPronto(); return; }
+        // ainda vazio: espera os tiles mais um pouco antes de declarar erro (aparelho lento ou aba em segundo plano)
+        const ok = () => { if (tem()) { m.off("sourcedata", ok); clearTimeout(t); if (this.op.aoPronto) this.op.aoPronto(); } };
+        m.on("sourcedata", ok);
+        const t = setTimeout(() => { m.off("sourcedata", ok); if (!tem() && this.op.aoErro && !this.avisou) { this.avisou = true; this.op.aoErro(); } }, 10000);
       });
     }
+    padroes(cor) { // desenha os ladrilhos dos padrões na cor do tema (troca junto com o tema)
+      const m = this.map, px = Math.min(window.devicePixelRatio || 1, 2), faz = (nome, fn) => { const s = 8 * px, cv = document.createElement("canvas"); cv.width = cv.height = s; const x = cv.getContext("2d"); x.scale(px, px); x.fillStyle = x.strokeStyle = cor; fn(x); const img = x.getImageData(0, 0, s, s); if (m.hasImage(nome)) m.updateImage(nome, img); else m.addImage(nome, img, { pixelRatio: px }); };
+      faz("hachura", (x) => { x.lineWidth = 1.6; x.beginPath(); for (const o of [-8, 0, 8]) { x.moveTo(o, 8); x.lineTo(o + 8, 0); } x.stroke(); });
+      faz("pontos", (x) => { x.beginPath(); x.arc(2, 2, 1.1, 0, 7); x.arc(6, 6, 1.1, 0, 7); x.fill(); });
+    }
     aplicaTema() {
-      if (!this.pronto) return; const m = this.map, c = this.cores();
+      if (!this.pronto) return; const m = this.map, c = this.cores(); this.padroes(c.padrao);
       m.setPaintProperty("fundo", "background-color", c.sea); m.setPaintProperty("mun-fill", "fill-color", ["coalesce", ["feature-state", "cor"], c.neutro]); m.setPaintProperty("mun-costura", "line-color", ["coalesce", ["feature-state", "cor"], c.neutro]);
       m.setPaintProperty("mun-line", "line-color", c.borda); m.setPaintProperty("uf-line", "line-color", c.uf);
       m.setPaintProperty("hov-line", "line-color", c.sel); m.setPaintProperty("sel-line", "line-color", c.sel);
@@ -94,7 +106,8 @@
     }
     recolore() {
       if (!this.pronto) return; const m = this.map, dest = this.destaque, dim = this.cores().dim;
-      for (let i = 0; i < this.n; i++) { const c = dest && !dest.has(i) ? dim : this.cor(i); if (this.ult[i] !== c) { m.setFeatureState({ source: "mun", sourceLayer: "mun", id: this.cod[i] }, { cor: c }); this.ult[i] = c; } }
+      const pad = this.op.padrao || (() => 0);
+      for (let i = 0; i < this.n; i++) { const fora = dest && !dest.has(i), c = fora ? dim : this.cor(i), p = fora ? 0 : pad(i), k = c + p; if (this.ult[i] !== k) { m.setFeatureState({ source: "mun", sourceLayer: "mun", id: this.cod[i] }, { cor: c, p }); this.ult[i] = k; } }
       this.aplicaTema();
     }
     setCor(fn) { this.cor = fn; this.recolore(); }
