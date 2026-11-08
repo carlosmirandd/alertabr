@@ -11,7 +11,9 @@ const ant = { inmet: null, inpe: null }; // último resultado bom de cada fonte:
 
 export async function monta(previo = null) {
   const fontes = {}, agora = Date.now();
-  const [a, f] = await Promise.allSettled([inmet(), inpe(agora)]);
+  // prazo total por fonte: uma fonte pública lenta ou fora do ar não pode segurar o ciclo (o que já temos dela continua valendo)
+  const prazo = (p, ms, nome) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(nome + " passou do prazo de " + ms / 1000 + " s")), ms))]);
+  const [a, f] = await Promise.allSettled([prazo(inmet(), 100000, "INMET"), prazo(inpe(agora), 170000, "INPE")]);
   if (a.status === "fulfilled") { ant.inmet = a.value; fontes.inmet = { ok: true, t: agora }; }
   else fontes.inmet = { ok: false, t: ant.inmet ? ant.inmet._t || 0 : 0, erro: String(a.reason && a.reason.message).slice(0, 120) };
   if (f.status === "fulfilled") { ant.inpe = f.value; fontes.inpe = { ok: true, t: agora }; }
