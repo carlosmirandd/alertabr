@@ -52,13 +52,20 @@
   }
   function criaMapa() {
     const op = { cor: corDe, padrao: padraoDe, aoClicar: aoClicar, aoPassar: aoPassar, insets: insets, capitais: CAPITAIS, aoPronto: () => { $("#carrega").classList.add("ok"); const ok = () => mapa.carregaFormas().then(() => { if (sel >= 0) pintaCartao(); }).catch(() => {}); if (window.requestIdleCallback) requestIdleCallback(ok, { timeout: 4000 }); else setTimeout(ok, 1500); }, aoErro: () => erroMapa("Não foi possível carregar o mapa. Verifique a conexão.") };
-    if (window.MapaGL && window.MapaGL.suportado()) { mapa = new window.MapaGL($("#mapa"), G, null, op); return; }
-    // sem WebGL: mapa em canvas, que precisa da geometria completa (mais pesada)
+    if (window.MapaGL && window.MapaGL.suportado()) {
+      // se o WebGL falhar antes de o mapa aparecer (contexto gráfico indisponível, tiles fora do ar), tenta o mapa em canvas
+      op.aoErro = () => { if (mapa && mapa.pronto) return; try { mapa.map.remove(); } catch (e) { /* já removido */ } $("#mapa").querySelectorAll(".maplibregl-canvas-container, .maplibregl-control-container").forEach((x) => x.remove()); criaCanvas(op); };
+      try { mapa = new window.MapaGL($("#mapa"), G, null, op); return; } catch (e) { /* cai para o canvas */ }
+    }
+    criaCanvas(op);
+  }
+  function criaCanvas(op) { // sem WebGL: mapa em canvas, que precisa da geometria completa (mais pesada)
+    op = { ...op, aoErro: undefined };
     mapa = { setCor() {}, setDestaque() {}, setSel() {}, zoomPara() {}, zoomLista() {}, zoomMais() {}, resetar() {}, refit() {}, forma: () => null, carregaFormas: () => Promise.reject(), w: 0, h: 0 };
     Promise.all([json("data/municipios.json", 30000), json("data/estados.json", 30000)]).then(([g, e]) => {
       mapa = new window.MapaBrasil($("#mapa"), g, e, op); mapa.prio = new Set([...CAPITAIS].map((c) => G.c.indexOf(c)).filter((k) => k >= 0));
       mapa.forma = (i) => ({ path: mapa.paths[i], caixa: mapa.box[i] }); mapa.carregaFormas = () => Promise.resolve();
-      $("#carrega").classList.add("ok"); if (sel >= 0) mapa.setSel(sel);
+      $("#carrega").classList.remove("erro"); $("#carrega").classList.add("ok"); if (D) mapa.setCor(corDe, true); if (sel >= 0) mapa.setSel(sel); if (mapa.refit) mapa.refit();
     }).catch(() => erroMapa("Não foi possível carregar o mapa. Verifique a conexão."));
   }
   function erroMapa(msg) {

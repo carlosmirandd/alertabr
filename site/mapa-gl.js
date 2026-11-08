@@ -54,6 +54,8 @@
       });
       const m = this.map; m.touchZoomRotate.disableRotation(); m.keyboard.disableRotation();
       m.on("load", () => this.montaCamadas());
+      // prazo de segurança: se em 15 s nenhum município apareceu (WebGL travado, tiles fora do ar), avisa para trocar de mapa
+      this.prazo = setTimeout(() => { let tem = false; try { tem = this.pronto && m.querySourceFeatures("mun", { sourceLayer: "mun" }).length > 0; } catch (e) { /* estilo não carregou */ } if (!tem && this.op.aoErro && !this.avisou) { this.avisou = true; this.op.aoErro(); } }, 15000);
       m.on("error", (e) => { console.warn("mapa:", e && e.error ? e.error.message : e); if (!this.carregou && this.op.aoErro && !this.avisou) { this.avisou = true; this.op.aoErro(e && e.error); } }); // falha antes de o mapa aparecer (ex.: tiles fora do ar)
       m.on("dragstart", () => { this.fitBrasil = false; }); m.on("zoomstart", (e) => { if (e.originalEvent) this.fitBrasil = false; });
       m.on("mousemove", (e) => this.passa(e)); m.getCanvas().addEventListener("mouseleave", () => this.passa(null));
