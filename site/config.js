@@ -10,5 +10,5 @@ window.ALERTABR = {
   // Anúncios (Google AdSense). Enquanto "cliente" estiver vazio NADA de anúncio é carregado e a faixa não aparece.
   //   cliente: "ca-pub-0000000000000000"   (seu ID de editor)      slotDesk: unidade 728x90      slotMovel: unidade 320x50
   // Para ver o espaço sem conta no AdSense, abra o site com ?ads=demo
-  ADS: { cliente: "", slotDesk: "", slotMovel: "" },
+  ADS: { cliente: "ca-pub-9830692597088821", slotDesk: "", slotMovel: "" }, // os anúncios só aparecem quando os dois slots (unidades 728x90 e 320x50) forem preenchidos
 };
