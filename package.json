@@ -8,7 +8,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "geo": "python geo/build_geo.py",
+    "geo": "python geo/build_geo.py && node geo/tiles.mjs",
+    "tiles": "node geo/tiles.mjs",
     "semente": "node relay/relay.mjs --uma --out site/data",
     "relay": "node relay/relay.mjs",
     "dev": "node scripts/dev.mjs",
@@ -33,5 +34,9 @@
     "mapa",
     "brasil",
     "municipios"
-  ]
+  ],
+  "devDependencies": {
+    "geojson-vt": "^4.0.2",
+    "vt-pbf": "^3.1.3"
+  }
 }

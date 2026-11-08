@@ -49,4 +49,11 @@ assert.deepEqual(nome(localiza("Chuva forte no Rio Grande do Sul", "")), [], "es
 assert.deepEqual(localiza("Previsão do tempo hoje para Brasília (DF): sol", "Goiânia Curitiba Niterói Recife Manaus Belém Natal", 53).m.length, 1, "resumo com lista de capitais não vira lugar da notícia");
 assert.deepEqual(localiza("Chuva forte no litoral", "", 33), { m: [], s: [33] }, "sem lugar no texto vale o estado do feed");
 assert.deepEqual(localiza("Previsão do tempo para Porto Alegre", "", 33).s, [43], "estado do feed não entra quando o texto cita outro lugar");
+// --- índice leve e tiles do mapa ---
+const mun = JSON.parse(readFileSync(new URL("../site/data/mun.json", import.meta.url)));
+assert.equal(mun.c.length, geo.c.length, "mun.json tem todos os municípios"); assert.deepEqual(mun.c, geo.c, "mesma ordem do municipios.json (os vetores do estado.json dependem disso)");
+assert.equal(mun.b.length, 4 * mun.c.length); assert.equal(mun.p.length, 2 * mun.c.length);
+const { existsSync } = await import("node:fs");
+for (const t of ["0/0/0", "4/5/8", "8/94/138"]) assert.ok(existsSync(new URL(`../site/tiles/${t}.pbf`, import.meta.url)), "tile " + t);
+assert.ok(/<!--contorno--><svg class="contorno"/.test(readFileSync(new URL("../site/index.html", import.meta.url), "utf8")), "contorno do esqueleto embutido no HTML");
 console.log("ok: todos os testes passaram");

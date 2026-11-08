@@ -40,33 +40,54 @@
 
   // ---------- carregar ----------
   const json = (u, ms = 12000) => fetch(u, { signal: AbortSignal.timeout(ms) }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  // Ordem de carga: índice dos municípios (leve) e dados de alerta saem JUNTOS; o mapa é criado sem esperar os alertas,
+  // e os painéis aparecem assim que os alertas chegam. Cada parte falha sozinha, com mensagem e "Tentar de novo".
   async function init() {
-    try { [G, E] = await Promise.all([json("data/municipios.json", 30000), json("data/estados.json", 30000)]); }
-    catch (e) { $("#carrega").textContent = "Não foi possível carregar o mapa. Recarregue a página."; return; }
-    const GL = !!(window.MapaGL && window.MapaGL.suportado()), Mapa = GL ? window.MapaGL : window.MapaBrasil;
-    mapa = new Mapa($("#mapa"), G, E, { cor: corDe, aoClicar: aoClicar, aoPassar: aoPassar, insets: insets, capitais: CAPITAIS, aoPronto: () => $("#carrega").classList.add("ok") });
-    if (!GL) { mapa.prio = new Set([...CAPITAIS].map((c) => G.c.indexOf(c)).filter((k) => k >= 0)); $("#carrega").classList.add("ok"); }
-    legenda(); pintaAgora(); ligaUI();
-    const h = /#m=(\d{7})/.exec(location.hash), hu = /#uf=(\d{2})/.exec(location.hash); if (/[?&]camada=focos/.test(location.search)) setCamada("focos"); await atualiza(true); mapa.refit();
+    const pDados = buscaEstado();
+    try { G = await json("data/mun.json", 30000); }
+    catch (e) { erroMapa("Não foi possível carregar a lista de municípios. Verifique a conexão."); status("erro"); return; }
+    criaMapa(); legenda(); pintaAgora(); ligaUI();
+    const h = /#m=(\d{7})/.exec(location.hash), hu = /#uf=(\d{2})/.exec(location.hash); if (/[?&]camada=focos/.test(location.search)) setCamada("focos");
+    const j = await pDados; if (j) aplica(j); else falhaDados();
+    if (mapa.fitBrasil !== false && mapa.refit) mapa.refit(); // enquadra o Brasil já descontando os cartões que acabaram de aparecer
     if (h) { const i = G.c.indexOf(+h[1]); if (i >= 0) seleciona(i); } else if (hu && NOME_UF[+hu[1]]) selecionaUf(+hu[1]);
     ciclo();
   }
-  function validado(j) { return j && j.v === 1 && Array.isArray(j.s) && j.s.length === G.c.length && Array.isArray(j.f) ? j : null; }
-  async function atualiza(primeira) {
+  function criaMapa() {
+    const op = { cor: corDe, aoClicar: aoClicar, aoPassar: aoPassar, insets: insets, capitais: CAPITAIS, aoPronto: () => { $("#carrega").classList.add("ok"); const ok = () => mapa.carregaFormas().then(() => { if (sel >= 0) pintaCartao(); }).catch(() => {}); if (window.requestIdleCallback) requestIdleCallback(ok, { timeout: 4000 }); else setTimeout(ok, 1500); }, aoErro: () => erroMapa("Não foi possível carregar o mapa. Verifique a conexão.") };
+    if (window.MapaGL && window.MapaGL.suportado()) { mapa = new window.MapaGL($("#mapa"), G, null, op); return; }
+    // sem WebGL: mapa em canvas, que precisa da geometria completa (mais pesada)
+    mapa = { setCor() {}, setDestaque() {}, setSel() {}, zoomPara() {}, zoomLista() {}, zoomMais() {}, resetar() {}, refit() {}, forma: () => null, carregaFormas: () => Promise.reject(), w: 0, h: 0 };
+    Promise.all([json("data/municipios.json", 30000), json("data/estados.json", 30000)]).then(([g, e]) => {
+      mapa = new window.MapaBrasil($("#mapa"), g, e, op); mapa.prio = new Set([...CAPITAIS].map((c) => G.c.indexOf(c)).filter((k) => k >= 0));
+      mapa.forma = (i) => ({ path: mapa.paths[i], caixa: mapa.box[i] }); mapa.carregaFormas = () => Promise.resolve();
+      $("#carrega").classList.add("ok"); if (sel >= 0) mapa.setSel(sel);
+    }).catch(() => erroMapa("Não foi possível carregar o mapa. Verifique a conexão."));
+  }
+  function erroMapa(msg) {
+    const c = $("#carrega"); c.classList.remove("ok"); c.classList.add("erro");
+    $("#carregaTxt").innerHTML = `${esc(msg)}<button type="button" class="btn" id="tentaMapa">Tentar de novo</button>`;
+    $("#tentaMapa").addEventListener("click", () => location.reload());
+  }
+  const TOTAL_MUN = 5570;
+  function validado(j) { return j && j.v === 1 && Array.isArray(j.s) && j.s.length === (G ? G.c.length : TOTAL_MUN) && Array.isArray(j.f) ? j : null; }
+  async function buscaEstado() { // tenta R2, depois a função do site, depois a cópia local; devolve null se todas falharem
     const emLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && !/[?&]feed=1/.test(location.search); // no seu computador: usa o arquivo local (veja o README)
     const urls = emLocal ? [CFG.LOCAL] : [CFG.FEED && CFG.FEED + "?v=" + Math.floor(Date.now() / 30000), CFG.RESERVA, CFG.LOCAL].filter(Boolean);
     for (let k = 0; k < urls.length; k++) {
       const u = urls[(fonteOk + k) % urls.length];
-      try {
-        const j = validado(await json(u, 10000)); if (!j) continue;
-        fonteOk = (fonteOk + k) % urls.length;
-        // um arquivo local mais velho que o que já temos não substitui os dados
-        if (D && j.gerado <= D.gerado) { status(); return; }
-        D = j; semDados = false; montaMembros(); mapa.setCor(corDe, true); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null); legenda(); pintaHero(); pintaAgora(); pintaCartao(); if (sujo.n) pintaNoticias(); status(); return;
-      } catch (e) { /* tenta a próxima fonte */ }
+      try { const j = validado(await json(u, 10000)); if (j) { fonteOk = (fonteOk + k) % urls.length; return j; } } catch (e) { /* tenta a próxima fonte */ }
     }
-    if (primeira || semDados) status("erro");
+    return null;
   }
+  let erroDados = false;
+  function aplica(j) {
+    if (D && j.gerado <= D.gerado) { status(); return; } // um arquivo mais velho que o que já temos não substitui os dados
+    D = j; semDados = false; erroDados = false; montaMembros(); mapa.setCor(corDe, true); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null);
+    legenda(); pintaHero(); pintaAgora(); pintaCartao(); if (sujo.n) pintaNoticias(); status();
+  }
+  function falhaDados() { if (!D) { erroDados = true; pintaAgora(); pintaHero(); } status("erro"); }
+  async function atualiza() { const j = await buscaEstado(); if (j) aplica(j); else falhaDados(); }
   function ciclo() {
     clearTimeout(timer);
     timer = setTimeout(async () => { if (!document.hidden) await atualiza(); ciclo(); }, CFG.INTERVALO);
@@ -75,7 +96,7 @@
   function montaMembros() { membros = D.alertas.map(() => new Set()); for (const i in D.m) for (const p of D.m[i]) membros[p] && membros[p].add(+i); }
   function status(forca) {
     const els = [$("#status"), $("#vivo")], t = $("#vivoTxt"); els.forEach((e) => e.classList.remove("velho", "erro"));
-    if (!D) { els.forEach((e) => e.classList.add("erro")); t.textContent = "sem dados"; return; }
+    if (!D) { els.forEach((e) => e.classList.add("erro")); const x = forca === "erro" ? "Sem conexão com as fontes" : "Carregando…"; t.textContent = x; $("#stTxt").textContent = x; $("#status").title = x; return; }
     const idade = Date.now() - D.gerado, fora = ["inmet", "inpe"].filter((k) => D.fontes[k] && !D.fontes[k].ok);
     if (forca === "erro" || idade > CFG.VELHO) els.forEach((e) => e.classList.add("velho"));
     const txt = (idade > CFG.VELHO ? "Dados de " : "Ao vivo · ") + ha(D.gerado) + (fora.length ? " · " + fora.map((x) => x.toUpperCase()).join(", ") + " fora do ar" : "");
@@ -85,7 +106,7 @@
 
   // ---------- números grandes (que também filtram o mapa) ----------
   function pintaHero() {
-    if (!D) return; const r = resumoBr(regiaoAtual()), tot = r.tot, soma = r.sev[1] + r.sev[2] + r.sev[3];
+    if (!D) { $("#hSub").textContent = erroDados ? "Sem conexão com as fontes de alerta. Tente de novo." : "Buscando os dados mais recentes…"; return; } const r = resumoBr(regiaoAtual()), tot = r.tot, soma = r.sev[1] + r.sev[2] + r.sev[3];
     $("#n3").textContent = fmt(r.sev[3]); $("#n2").textContent = fmt(r.sev[2]); $("#n1").textContent = fmt(r.sev[1]); $("#nF").textContent = fmt(r.focos);
     $("#bb3").style.width = (r.sev[3] / tot * 100) + "%"; $("#bb2").style.width = (r.sev[2] / tot * 100) + "%"; $("#bb1").style.width = (r.sev[1] / tot * 100) + "%";
     document.querySelectorAll("#filtros [data-sev]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.sev === filtroSev && camada === "alertas")));
@@ -208,7 +229,8 @@
   const RODAPE = '<footer class="rodape">Dados: <a href="https://alertas2.inmet.gov.br/" target="_blank" rel="noopener">INMET</a> · <a href="https://terrabrasilis.dpi.inpe.br/queimadas/portal/" target="_blank" rel="noopener">INPE Queimadas</a> · malhas <a href="https://www.ibge.gov.br/" target="_blank" rel="noopener">IBGE</a> · <a href="https://www.gdacs.org/" target="_blank" rel="noopener">GDACS</a> · <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a> · notícias dos veículos citados. <a href="sobre.html">Sobre</a> · <a href="privacidade.html">Privacidade</a>. Em emergência ligue <b>199</b> ou <b>193</b>.</footer>';
   const horaTxt = () => new Date(D.gerado).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   function pintaAgora() {
-    const el = $("#aba-agora"); if (!D) { el.innerHTML = '<p class="vazio esq">Buscando os dados mais recentes…</p>'; return; }
+    const el = $("#aba-agora");
+    if (!D) { el.innerHTML = erroDados ? '<section class="lista estado-msg" role="alert"><p><b>Não foi possível buscar os alertas agora.</b> As fontes (INMET e INPE) ou a sua conexão não responderam.</p><button type="button" class="btn" data-tenta="dados">Tentar de novo</button></section>' : '<section class="lista estado-msg" aria-busy="true"><p>Buscando os alertas mais recentes…</p></section>'; return; }
     el.innerHTML = (sel >= 0 ? municipio(sel) : brasil()) + RODAPE;
     requestAnimationFrame(cabeLista);
   }
@@ -307,7 +329,7 @@
       lista = lista.slice(0, desk() ? 15 : 7);
       if ((feed === undefined || api === undefined) && !lista.length) return; // espera o outro lado antes de dizer que não há nada
       const falhou = feed === null && (api === null || (api && api.erro));
-      L.innerHTML = lista.length ? lista.map(item).join("") + aviso : (local && aviso) ? aviso : `<p class="vazio">Nenhuma notícia recente sobre o assunto${falhou ? " (fontes indisponíveis agora)" : ""}.</p><a class="btn sec" style="display:inline-flex;align-items:center;margin:4px" href="https://news.google.com/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener noreferrer">Buscar no Google Notícias</a>`;
+      L.innerHTML = lista.length ? lista.map(item).join("") + aviso : falhou ? '<p class="vazio">Não foi possível buscar as notícias agora.</p><button type="button" class="btn" style="margin:4px" data-tenta="noticias">Tentar de novo</button>' : (local && aviso) ? aviso : `<p class="vazio">Nenhuma notícia recente sobre o assunto.</p><a class="btn sec" style="display:inline-flex;align-items:center;margin:4px" href="https://news.google.com/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener noreferrer">Buscar no Google Notícias</a>`;
       cabeNoticias();
     };
     carregaFeed().then((j) => { feed = j; desenha(); });
@@ -329,6 +351,7 @@
       <div class="chips"><button data-fmt="post" aria-pressed="${formato === "post"}">Post 1:1</button><button data-fmt="stories" aria-pressed="${formato === "stories"}">Stories 9:16</button></div>
       ${d ? '<div class="cartao-l"><div id="prev"></div><div class="acoes"><button class="btn" data-baixa="1">Baixar PNG</button><button class="btn sec" data-comp="1">Compartilhar</button></div></div>' : '<p class="vazio">Sem aviso nem foco de calor neste município agora, então não há o que divulgar.</p>'}`;
     if (!d) { cartaoCv = null; return; }
+    if (sel >= 0 && !d.forma && mapa.carregaFormas && !mapa.paths) mapa.carregaFormas().then(() => { if (sel >= 0) pintaCartao(); }).catch(() => {});
     cartaoCv = window.Cartao.gera(d); const img = new Image(); img.className = "previa"; img.alt = "Prévia do cartão"; img.src = cartaoCv.toDataURL("image/jpeg", 0.85); $("#prev").appendChild(img);
   }
   const nomeArq = () => "alertabr-" + (sel >= 0 ? norm(G.n[sel]).replace(/[^a-z0-9]+/g, "-") : selUf ? norm(NOME_UF[selUf]).replace(/[^a-z0-9]+/g, "-") : "brasil") + "-" + formato + ".png";
@@ -362,12 +385,12 @@
     $("#aba-agora").addEventListener("wheel", (e) => { const p = e.target.closest(".pils"); if (p && p.scrollWidth > p.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { p.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false }); // roda do mouse rola a faixa de avisos na horizontal
     $("#crumbs").addEventListener("click", (e) => { const t = e.target.closest("button"); if (!t) return; if (t.dataset.uf) selecionaUf(+t.dataset.uf); else { seleciona(-1); mapa.resetar(); } });
     $("#painel").addEventListener("click", (e) => {
-      const t = e.target.closest("[data-pil],[data-alerta],[data-cid],[data-ir],[data-uf],[data-limpa],[data-tema],[data-fmt],[data-baixa],[data-comp],[data-fut]"); if (!t || t === document.documentElement || !e.currentTarget.contains(t)) return; const d = t.dataset; // <html data-tema="escuro"> também casa com o seletor: ignora tudo que está fora do painel
+      const t = e.target.closest("[data-pil],[data-alerta],[data-cid],[data-ir],[data-uf],[data-limpa],[data-tenta],[data-tema],[data-fmt],[data-baixa],[data-comp],[data-fut]"); if (!t || t === document.documentElement || !e.currentTarget.contains(t)) return; const d = t.dataset; // <html data-tema="escuro"> também casa com o seletor: ignora tudo que está fora do painel
       if (d.pil != null) { const p = +d.pil; if (sel >= 0) { pilSel = p; pintaAgora(); } else { destaquePos = destaquePos === p ? -1 : p; mapa.setDestaque(destaquePos >= 0 ? membros[p] : null); if (destaquePos >= 0) { setCamada("alertas"); mapa.zoomLista([...membros[p]]); } pintaAgora(); } }
       else if (d.alerta != null) { const p = +d.alerta; destaquePos = destaquePos === p ? -1 : p; mapa.setDestaque(destaquePos >= 0 ? membros[p] : null); if (destaquePos >= 0) { setCamada("alertas"); mapa.zoomLista([...membros[p]]); if (folha()) painelAltura("meio"); } pintaAgora(); }
       else if (d.cid != null) { seleciona(+d.cid); }
       else if (d.fut) { verFut = true; pintaAgora(); }
-      else if (d.ir) irPara(d.ir); else if (d.uf) selecionaUf(+d.uf); else if (d.limpa) { seleciona(-1); mapa.resetar(); }
+      else if (d.tenta === "dados") { erroDados = false; pintaAgora(); atualiza(); } else if (d.tenta === "noticias") { feedN = null; cacheN.clear(); pintaNoticias(); } else if (d.ir) irPara(d.ir); else if (d.uf) selecionaUf(+d.uf); else if (d.limpa) { seleciona(-1); mapa.resetar(); }
       else if (d.tema) { tema = d.tema; pintaNoticias(); } else if (d.fmt) { formato = d.fmt; pintaCartao(); }
       else if (d.baixa && cartaoCv) window.Cartao.baixa(cartaoCv, nomeArq());
       else if (d.comp && cartaoCv) window.Cartao.compartilha(cartaoCv, nomeArq(), (sel >= 0 ? G.n[sel] + ": " : selUf ? NOME_UF[selUf] + ": " : "") + "alertas e focos de calor em tempo real").then((ok) => { if (!ok) window.Cartao.baixa(cartaoCv, nomeArq()); });

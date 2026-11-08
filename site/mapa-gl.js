@@ -29,26 +29,22 @@
   const centro = (r) => { let a = 0, cx = 0, cy = 0; for (let i = 0; i < r.length - 1; i++) { const f = r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1]; a += f; cx += (r[i][0] + r[i + 1][0]) * f; cy += (r[i][1] + r[i + 1][1]) * f; } return a ? [cx / (3 * a), cy / (3 * a)] : r[0]; };
 
   class MapaGL {
+    // geo = data/mun.json: códigos (c), nomes (n), caixas em graus×100 (b), ponto do rótulo em graus×1000 (p), rótulo dos estados (uf, graus×10000).
+    // A geometria vem em tiles vetoriais estáticos (site/tiles, gerados por geo/tiles.mjs): o navegador só baixa o que está na tela.
     constructor(el, geo, est, op = {}) {
-      this.el = el; this.op = op; this.n = geo.c.length; this.cod = geo.c; this.nomes = geo.n; this.d = geo.d; this.ufLab = est.lab;
+      this.el = el; this.op = op; this.n = geo.c.length; this.cod = geo.c; this.nomes = geo.n; this.paths = null;
       this.idx = new Map(geo.c.map((c, i) => [c, i])); this.cor = op.cor || (() => "#444"); this.sel = -1; this.hover = -1; this.destaque = null; this.ult = new Array(this.n).fill(null);
       this.pronto = false; this.fitBrasil = true; this.capitais = op.capitais || new Set();
-      const [K, minx, miny, S] = est.proj, ll = (p) => [+((p[0] / S + minx) / K).toFixed(5), +(-(p[1] / S + miny)).toFixed(5)];
-      // geometria em graus (a partir dos mesmos caminhos compactos): polígonos, caixas, pontos de rótulo
-      const feats = [], pts = [], bnd = new Array(this.n);
+      const bnd = new Array(this.n), pts = [];
       for (let i = 0; i < this.n; i++) {
-        const rs = aneis(this.d[i]).map((r) => { const a = r.map(ll); a.push(a[0]); return a; });
-        let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, maior = null, am = -1;
-        for (const r of rs) { for (const p of r) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; } const a = area(r); if (a > am) { am = a; maior = r; } }
+        const x0 = geo.b[4 * i] / 100, y0 = geo.b[4 * i + 1] / 100, x1 = geo.b[4 * i + 2] / 100, y1 = geo.b[4 * i + 3] / 100;
         bnd[i] = [[x0, y0], [x1, y1]];
-        feats.push({ type: "Feature", id: this.cod[i], properties: { c: this.cod[i] }, geometry: { type: "MultiPolygon", coordinates: rs.map((r) => [r]) } });
         const prio = this.capitais.has(this.cod[i]) ? 1e6 : (x1 - x0) * (y1 - y0);
-        pts.push({ type: "Feature", properties: { n: this.nomes[i], s: -prio }, geometry: { type: "Point", coordinates: maior ? centro(maior) : [x0, y0] } });
+        pts.push({ type: "Feature", properties: { n: this.nomes[i], s: -prio }, geometry: { type: "Point", coordinates: [geo.p[2 * i] / 1000, geo.p[2 * i + 1] / 1000] } });
       }
       this.bnd = bnd;
-      const ufLin = linhas(est.linhas || "").map((l) => l.map(ll));
-      const ufPts = Object.keys(est.lab).map((u) => ({ type: "Feature", properties: { n: u }, geometry: { type: "Point", coordinates: ll(est.lab[u]) } }));
-      this.dados = { mun: { type: "FeatureCollection", features: feats }, rot: { type: "FeatureCollection", features: pts }, uf: { type: "Feature", geometry: { type: "MultiLineString", coordinates: ufLin } }, ufr: { type: "FeatureCollection", features: ufPts } };
+      const ufPts = Object.keys(geo.uf || {}).map((u) => ({ type: "Feature", properties: { n: u }, geometry: { type: "Point", coordinates: [geo.uf[u][0] / 1e4, geo.uf[u][1] / 1e4] } }));
+      this.dados = { rot: { type: "FeatureCollection", features: pts }, ufr: { type: "FeatureCollection", features: ufPts } };
 
       const c = this.cores(), base = location.origin + location.pathname.replace(/[^/]*$/, "");
       this.map = new maplibregl.Map({
@@ -58,6 +54,7 @@
       });
       const m = this.map; m.touchZoomRotate.disableRotation(); m.keyboard.disableRotation();
       m.on("load", () => this.montaCamadas());
+      m.on("error", (e) => { if (!this.carregou && this.op.aoErro && !this.avisou) { this.avisou = true; this.op.aoErro(e && e.error); } }); // falha antes de o mapa aparecer (ex.: tiles fora do ar)
       m.on("dragstart", () => { this.fitBrasil = false; }); m.on("zoomstart", (e) => { if (e.originalEvent) this.fitBrasil = false; });
       m.on("mousemove", (e) => this.passa(e)); m.getCanvas().addEventListener("mouseleave", () => this.passa(null));
       m.on("click", (e) => { const f = m.queryRenderedFeatures(e.point, { layers: ["mun-fill"] })[0]; if (this.op.aoClicar) this.op.aoClicar(f ? this.idx.get(f.id) : -1, e.originalEvent); });
@@ -68,30 +65,36 @@
     padding() { const i = this.op.insets ? this.op.insets() : null; return i ? { left: i.l, right: i.r, top: i.t, bottom: i.b } : { left: 0, right: 0, top: 0, bottom: 0 }; }
     montaCamadas() {
       const m = this.map, c = this.cores(), fonte = ["Open Sans Semibold"];
-      m.addSource("mun", { type: "geojson", data: this.dados.mun, tolerance: 0.25, buffer: 16, maxzoom: 11 });
-      m.addSource("uf", { type: "geojson", data: this.dados.uf, tolerance: 0.4 });
+      const base = location.origin + location.pathname.replace(/[^/]*$/, "");
+      m.addSource("mun", { type: "vector", tiles: [base + "tiles/{z}/{x}/{y}.pbf"], minzoom: 0, maxzoom: 8, bounds: [-74.2, -34, -28.6, 5.4], promoteId: { mun: "c" } });
       m.addSource("rot", { type: "geojson", data: this.dados.rot, maxzoom: 8 });
       m.addSource("ufr", { type: "geojson", data: this.dados.ufr });
-      m.addLayer({ id: "mun-fill", type: "fill", source: "mun", paint: { "fill-color": ["coalesce", ["feature-state", "cor"], c.neutro], "fill-color-transition": { duration: 600 }, "fill-antialias": true } });
-      m.addLayer({ id: "mun-line", type: "line", source: "mun", minzoom: 5, paint: { "line-color": c.borda, "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.25, 9, 0.7, 12, 1.2], "line-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0, 6.5, 1] } });
-      m.addLayer({ id: "uf-line", type: "line", source: "uf", layout: { "line-join": "round" }, paint: { "line-color": c.uf, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.6, 8, 1.5] } });
-      m.addLayer({ id: "hov-line", type: "line", source: "mun", filter: ["==", ["get", "c"], -1], layout: { "line-join": "round" }, paint: { "line-color": c.sel, "line-width": 1.8, "line-opacity": 0.75 } });
-      m.addLayer({ id: "sel-line", type: "line", source: "mun", filter: ["==", ["get", "c"], -1], layout: { "line-join": "round" }, paint: { "line-color": c.sel, "line-width": 3 } });
+      m.addLayer({ id: "mun-fill", type: "fill", source: "mun", "source-layer": "mun", paint: { "fill-color": ["coalesce", ["feature-state", "cor"], c.neutro], "fill-color-transition": { duration: 600 }, "fill-antialias": true } });
+      // costura: contorno de ~1 px na MESMA cor do município cobre as frestas que a simplificação dos tiles abre entre vizinhos
+      m.addLayer({ id: "mun-costura", type: "line", source: "mun", "source-layer": "mun", layout: { "line-join": "round" }, paint: { "line-color": ["coalesce", ["feature-state", "cor"], c.neutro], "line-color-transition": { duration: 600 }, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.9, 8, 1.2] } });
+      m.addLayer({ id: "mun-line", type: "line", source: "mun", "source-layer": "mun", minzoom: 5, paint: { "line-color": c.borda, "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.25, 9, 0.7, 12, 1.2], "line-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0, 6.5, 1] } });
+      m.addLayer({ id: "uf-line", type: "line", source: "mun", "source-layer": "uf", layout: { "line-join": "round" }, paint: { "line-color": c.uf, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.6, 8, 1.5] } });
+      m.addLayer({ id: "hov-line", type: "line", source: "mun", "source-layer": "mun", filter: ["==", ["get", "c"], -1], layout: { "line-join": "round" }, paint: { "line-color": c.sel, "line-width": 1.8, "line-opacity": 0.75 } });
+      m.addLayer({ id: "sel-line", type: "line", source: "mun", "source-layer": "mun", filter: ["==", ["get", "c"], -1], layout: { "line-join": "round" }, paint: { "line-color": c.sel, "line-width": 3 } });
       m.addLayer({ id: "rot-mun", type: "symbol", source: "rot", minzoom: 5.4, layout: { "text-field": ["get", "n"], "text-font": fonte, "text-size": ["interpolate", ["linear"], ["zoom"], 5.4, 10, 10, 13], "symbol-sort-key": ["get", "s"], "text-padding": 4, "text-max-width": 7 }, paint: { "text-color": c.rot, "text-halo-color": c.halo, "text-halo-width": 1.4 } });
       m.addLayer({ id: "rot-uf", type: "symbol", source: "ufr", maxzoom: 6, layout: { "text-field": ["get", "n"], "text-font": fonte, "text-size": 12, "text-allow-overlap": true }, paint: { "text-color": c.rot, "text-halo-color": c.halo, "text-halo-width": 1.6 } });
       this.pronto = true; this.recolore(); this.setSel(this.sel);
-      m.once("idle", () => { if (this.op.aoPronto) this.op.aoPronto(); });
+      m.once("idle", () => { // tile que não chega (404, offline) não gera erro no MapLibre: confere se algum município foi desenhado
+        this.carregou = true;
+        if (!m.querySourceFeatures("mun", { sourceLayer: "mun" }).length) { if (this.op.aoErro && !this.avisou) { this.avisou = true; this.op.aoErro(); } return; }
+        if (this.op.aoPronto) this.op.aoPronto();
+      });
     }
     aplicaTema() {
       if (!this.pronto) return; const m = this.map, c = this.cores();
-      m.setPaintProperty("fundo", "background-color", c.sea); m.setPaintProperty("mun-fill", "fill-color", ["coalesce", ["feature-state", "cor"], c.neutro]);
+      m.setPaintProperty("fundo", "background-color", c.sea); m.setPaintProperty("mun-fill", "fill-color", ["coalesce", ["feature-state", "cor"], c.neutro]); m.setPaintProperty("mun-costura", "line-color", ["coalesce", ["feature-state", "cor"], c.neutro]);
       m.setPaintProperty("mun-line", "line-color", c.borda); m.setPaintProperty("uf-line", "line-color", c.uf);
       m.setPaintProperty("hov-line", "line-color", c.sel); m.setPaintProperty("sel-line", "line-color", c.sel);
       for (const id of ["rot-mun", "rot-uf"]) { m.setPaintProperty(id, "text-color", c.rot); m.setPaintProperty(id, "text-halo-color", c.halo); }
     }
     recolore() {
       if (!this.pronto) return; const m = this.map, dest = this.destaque, dim = this.cores().dim;
-      for (let i = 0; i < this.n; i++) { const c = dest && !dest.has(i) ? dim : this.cor(i); if (this.ult[i] !== c) { m.setFeatureState({ source: "mun", id: this.cod[i] }, { cor: c }); this.ult[i] = c; } }
+      for (let i = 0; i < this.n; i++) { const c = dest && !dest.has(i) ? dim : this.cor(i); if (this.ult[i] !== c) { m.setFeatureState({ source: "mun", sourceLayer: "mun", id: this.cod[i] }, { cor: c }); this.ult[i] = c; } }
       this.aplicaTema();
     }
     setCor(fn) { this.cor = fn; this.recolore(); }
@@ -111,7 +114,9 @@
     zoomPara(i) { if (i < 0) return; this.fitBrasil = false; this.map.fitBounds(this.bnd[i], { padding: this.padding(), maxZoom: 11, duration: 700 }); }
     zoomLista(lista) { if (!lista.length) return; let b = [[1e9, 1e9], [-1e9, -1e9]]; for (const i of lista) { const q = this.bnd[i]; b[0][0] = Math.min(b[0][0], q[0][0]); b[0][1] = Math.min(b[0][1], q[0][1]); b[1][0] = Math.max(b[1][0], q[1][0]); b[1][1] = Math.max(b[1][1], q[1][1]); } this.fitBrasil = false; this.map.fitBounds(b, { padding: this.padding(), maxZoom: 9, duration: 700 }); }
     zoomMais(f, px, py, anima) { const m = this.map; this.fitBrasil = false; m.easeTo({ zoom: m.getZoom() + Math.log2(f), around: m.unproject([px, py]), duration: anima ? 300 : 0 }); }
-    forma(i) { return { path: new Path2D(this.d[i]), caixa: caixa(this.d[i]) }; } // contorno para o cartão de compartilhar
+    // contorno detalhado (cartão de compartilhar, localização): baixado só quando preciso, em segundo plano
+    carregaFormas() { if (!this.pFormas) this.pFormas = fetch("data/municipios.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((g) => { this.paths = g.d; return g; }).catch((e) => { this.pFormas = null; throw e; }); return this.pFormas; }
+    forma(i) { return this.paths && this.paths[i] ? { path: new Path2D(this.paths[i]), caixa: caixa(this.paths[i]) } : null; }
   }
   window.MapaGL = MapaGL; window.MapaGL.suportado = suportado;
 })();
