@@ -224,6 +224,51 @@ a { color: inherit; text-underline-offset: 2px; }
 .painel .abas { position: sticky; top: 28px; z-index: 2; background: var(--s0); }
 .painel .p-corpo { flex: none; overflow: visible; }
 
+
+/* ---------- cartão do tempo (cena animada do aviso mais grave): relance de que tipo de tempo vem aí ---------- */
+.ceu { --tx: #fff; --tx2: rgba(255,255,255,.86); position: relative; overflow: hidden; isolation: isolate; margin-top: var(--e-3); padding: var(--e-3) var(--e-4); border-radius: var(--r); color: var(--tx); background: linear-gradient(160deg, #4d5f78, #34425a); min-height: 84px; display: flex; align-items: center; }
+.ceu.ani { animation: surge .45s var(--ease-out); } @keyframes surge { from { opacity: 0; transform: scale(.985); } }
+.ceu.chuva { background: linear-gradient(160deg, #4d5f78, #34425a); }
+.ceu.tempestade { background: linear-gradient(160deg, #343c52, #1c2233); }
+.ceu.frio { --tx: #0f2342; --tx2: rgba(15,35,66,.82); background: linear-gradient(160deg, #c3cddb, #9eacbe); }
+.ceu.sol, .ceu.limpo { --tx: #0b1d3f; --tx2: rgba(11,29,63,.82); background: linear-gradient(170deg, #5aa0ee, #a6d3f8); }
+.ceu.vento { background: linear-gradient(160deg, #566c80, #3d4f61); }
+.ceu.nuvem, .ceu.neblina { background: linear-gradient(160deg, #5f6977, #454e5b); }
+.ceu.fogo { background: linear-gradient(165deg, #5e2c1b, #1d1310); }
+.ceu-c { position: relative; display: flex; align-items: center; gap: var(--e-4); min-width: 0; }
+.ceu .c-ico { width: 64px; height: 50px; } .ceu .pal { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ceu .pal b { font-size: var(--t-3); line-height: 1.25; font-weight: 700; } .ceu .pal small { font-size: var(--t-1); line-height: 1.35; color: var(--tx2); }
+.ceu > .cam { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.c-ico { width: 64px; height: 50px; flex: none; } .c-ico svg { width: 100%; height: 100%; display: block; }
+.c-ico .nv-b { fill: #fff; filter: drop-shadow(0 6px 10px rgba(10,20,40,.25)); }
+.ceu.tempestade .c-ico .nv-b { fill: #d3d9e4; } .ceu.fogo .c-ico .nv-b { fill: #f4e4d8; }
+.ceu.sol .c-ico .nv-b, .ceu.limpo .c-ico .nv-b { display: none; }
+.c-ico .rs { transform-origin: 60px 46px; animation: gira 40s linear infinite; }
+
+/* camadas animadas do céu (poucos elementos, só transform/opacity) */
+.cam .c-n { position: absolute; fill: #fff; opacity: .3; animation: deriva var(--t, 60s) linear infinite alternate; }
+.cam .c-n.n1 { width: 150px; top: 14%; left: -30px; opacity: .4; --t: 52s; } .cam .c-n.n2 { width: 210px; top: 34%; left: 14%; opacity: .26; --t: 70s; animation-direction: alternate-reverse; } .cam .c-n.n3 { width: 130px; top: 55%; left: 30%; opacity: .22; --t: 46s; }
+@keyframes deriva { from { transform: translateX(-14px); } to { transform: translateX(34px); } }
+.ceu.chuva .c-n, .ceu.tempestade .c-n { fill: #b9c3d3; } .ceu.tempestade .c-n { fill: #8b95aa; opacity: .3; } .ceu.fogo .c-n { display: none; }
+.gt { position: absolute; top: -70px; width: 1.6px; height: var(--h, 40px); border-radius: 2px; background: linear-gradient(to bottom, transparent, rgba(255,255,255,.75)); opacity: var(--o, .6); animation: cair var(--t, 1s) linear infinite; animation-delay: var(--d, 0s); }
+.ceu.tempestade .gt { width: 1.8px; }
+@keyframes cair { to { transform: translateY(460px) rotate(var(--r, 0deg)); } } .ceu.tempestade .gt { --r: 14deg; }
+.gota { position: absolute; width: var(--s, 7px); height: var(--s, 7px); border-radius: 50%; background: radial-gradient(circle at 32% 30%, rgba(255,255,255,.95), rgba(255,255,255,.18) 55%, rgba(255,255,255,.05)); border: 1px solid rgba(255,255,255,.35); opacity: .6; animation: gota 5s ease-in-out infinite; animation-delay: var(--d, 0s); }
+@keyframes gota { 0%, 100% { opacity: .15; transform: scale(.85); } 50% { opacity: .85; transform: scale(1); } }
+.raio { position: absolute; inset: 0; background: radial-gradient(circle at 70% 25%, rgba(255,255,255,.9), rgba(200,220,255,0) 60%); opacity: 0; animation: raio 7s infinite; }
+@keyframes raio { 0%, 92%, 100% { opacity: 0; } 93% { opacity: .8; } 94% { opacity: .05; } 95.5% { opacity: .55; } 97% { opacity: 0; } }
+.fl { position: absolute; top: -12px; width: var(--s, 5px); height: var(--s, 5px); border-radius: 50%; background: #fff; opacity: .85; animation: neva var(--t, 8s) linear infinite; animation-delay: var(--d, 0s); }
+@keyframes neva { 0% { transform: translate(0, -10px); } 50% { transform: translate(var(--x, 14px), 200px); } 100% { transform: translate(calc(var(--x, 14px) * -1), 420px); } }
+.sol-g { position: absolute; width: 190px; height: 190px; left: 50%; top: 4%; margin-left: -95px; }
+.sol-g .disco { position: absolute; inset: 30px; border-radius: 50%; background: radial-gradient(circle at 38% 35%, #fff6c8, #ffd76a 55%, #ffbf3d); opacity: .95; box-shadow: 0 0 60px 16px rgba(255,214,102,.5); }
+.sol-g .raios { position: absolute; inset: -6px; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(255,230,140,.7) 0 5deg, transparent 5deg 30deg); -webkit-mask: radial-gradient(circle, transparent 46%, #000 48%, #000 62%, transparent 66%); mask: radial-gradient(circle, transparent 46%, #000 48%, #000 62%, transparent 66%); animation: gira 48s linear infinite; }
+@keyframes gira { to { transform: rotate(360deg); } }
+.vt { position: absolute; left: -90px; height: 2px; width: var(--w, 70px); border-radius: 2px; background: linear-gradient(to right, transparent, rgba(255,255,255,.7)); opacity: var(--o, .5); animation: sopra var(--t, 2.4s) linear infinite; animation-delay: var(--d, 0s); }
+@keyframes sopra { to { transform: translateX(560px); } }
+.br { position: absolute; bottom: -12px; width: var(--s, 5px); height: var(--s, 5px); border-radius: 50%; background: radial-gradient(circle, #ffd59b, #ff7a1a); box-shadow: 0 0 8px 2px rgba(255,122,26,.5); opacity: 0; animation: sobe var(--t, 5s) ease-in infinite; animation-delay: var(--d, 0s); }
+@keyframes sobe { 0% { opacity: 0; transform: translate(0, 0); } 15% { opacity: .95; } 100% { opacity: 0; transform: translate(var(--x, 18px), -340px); } }
+.ceu.fogo::after { content: ""; position: absolute; inset: auto 0 0 0; height: 46%; background: linear-gradient(to top, rgba(255,106,20,.45), transparent); z-index: -1; }
+
 /* ---------- computador (e celular deitado): uma coluna à esquerda, mapa no resto ---------- */
 @media (min-width: 900px), (orientation: landscape) and (min-width: 600px) and (max-height: 560px) {
   .barra { left: var(--e-3); right: auto; width: calc(var(--pw) - 2 * var(--e-3)); }

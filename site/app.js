@@ -187,6 +187,59 @@
   }
   function alertasDe(i) { return D && D.m[i] ? D.m[i].map((p) => D.alertas[p]).filter(Boolean) : []; }
 
+  const rng = (s) => () => { s |= 0; s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  function camadasCeu(tipo) { // fundo animado: chuva, raios, neve, sol, vento ou brasas (só transform/opacity, poucos elementos)
+    const r = rng(tipo.length * 977 + tipo.charCodeAt(0)), R = (x, y) => x + r() * (y - x), P = (n, d = 1) => n.toFixed(d); let h = "";
+    h += '<svg class="c-n n1" viewBox="0 0 112 76"><use href="#i-nuvem"/></svg><svg class="c-n n2" viewBox="0 0 112 76"><use href="#i-nuvem"/></svg><svg class="c-n n3" viewBox="0 0 112 76"><use href="#i-nuvem"/></svg>';
+    if (tipo === "chuva" || tipo === "tempestade") {
+      const n = tipo === "tempestade" ? 18 : 14;
+      for (let k = 0; k < n; k++) h += `<i class="gt" style="left:${P(R(0, 100))}%;--h:${P(R(22, 58), 0)}px;--o:${P(R(.25, .8), 2)};--t:${P(R(.6, 1.3), 2)}s;--d:-${P(R(0, 1.4), 2)}s"></i>`;
+      for (let k = 0; k < 4; k++) h += `<b class="gota" style="left:${P(R(2, 96))}%;top:${P(R(4, 92))}%;--s:${P(R(4, 9), 0)}px;--d:-${P(R(0, 5), 1)}s"></b>`;
+      if (tipo === "tempestade") h += '<div class="raio"></div>';
+    } else if (tipo === "frio") {
+      for (let k = 0; k < 30; k++) h += `<i class="fl" style="left:${P(R(0, 100))}%;--s:${P(R(3, 6), 0)}px;--t:${P(R(7, 12), 1)}s;--d:-${P(R(0, 10), 1)}s;--x:${P(R(-22, 22), 0)}px"></i>`;
+    } else if (tipo === "sol" || tipo === "limpo") {
+      h += '<div class="sol-g"><span class="raios"></span><span class="disco"></span></div>';
+    } else if (tipo === "vento") {
+      for (let k = 0; k < 12; k++) h += `<i class="vt" style="top:${P(R(8, 92))}%;--w:${P(R(50, 120), 0)}px;--o:${P(R(.3, .7), 2)};--t:${P(R(1.6, 3.4), 1)}s;--d:-${P(R(0, 3), 1)}s"></i>`;
+    } else if (tipo === "fogo") {
+      for (let k = 0; k < 22; k++) h += `<i class="br" style="left:${P(R(0, 100))}%;--s:${P(R(3, 7), 0)}px;--t:${P(R(3.5, 7), 1)}s;--d:-${P(R(0, 6), 1)}s;--x:${P(R(-30, 30), 0)}px"></i>`;
+    }
+    return `<div class="cam" aria-hidden="true">${h}</div>`;
+  }
+  function icoCeu(tipo) {
+    const nuv = '<use href="#i-nuvem" class="nv-b" x="4" y="0" width="112" height="76"/>';
+    let s;
+    if (tipo === "sol" || tipo === "limpo") s = '<svg viewBox="0 0 120 92" aria-hidden="true"><defs><radialGradient id="gs" cx=".38" cy=".35"><stop offset="0" stop-color="#fff3b8"/><stop offset="1" stop-color="#ffb62e"/></radialGradient></defs><g class="rs" stroke="#ffc93d" stroke-width="5" stroke-linecap="round">' + [...Array(12)].map((_, k) => `<path d="M60 46 m0 -34 v-8" transform="rotate(${k * 30} 60 46)"/>`).join("") + '</g><circle cx="60" cy="46" r="22" fill="url(#gs)"/></svg>';
+    else if (tipo === "fogo") s = '<svg viewBox="0 0 24 24" fill="#ffb15c" stroke="#ff7a1a" stroke-width="1.1" stroke-linejoin="round" aria-hidden="true"><use href="#i-fogo"/></svg>';
+    else if (tipo === "chuva") s = `<svg viewBox="0 0 120 92" aria-hidden="true">${nuv}<path d="M42 82v7M60 80v8M78 82v7" stroke="#a9c4ee" stroke-width="3.6" stroke-linecap="round"/></svg>`;
+    else if (tipo === "tempestade") s = `<svg viewBox="0 0 120 92" aria-hidden="true">${nuv}<path d="M66 58 50 80h11l-4 12 20-24H64l4-10z" fill="#ffc83d"/></svg>`;
+    else if (tipo === "vento") s = `<svg viewBox="0 0 120 92" aria-hidden="true">${nuv}<path d="M18 84h56M40 90h44" stroke="rgba(255,255,255,.75)" stroke-width="3.6" stroke-linecap="round"/></svg>`;
+    else s = `<svg viewBox="0 0 120 92" aria-hidden="true">${nuv}</svg>`;
+    return `<div class="c-ico">${s}</div>`;
+  }
+  // Cartão do tempo: cena animada + o tipo do aviso mais grave (relance). Não repete números: eles ficam só na contagem do topo.
+  let ultimoCeu = "";
+  function pintaCeu() {
+    const el = $("#ceu"); if (!D) { el.hidden = true; return; }
+    let tipo = "limpo", palavra = "Sem aviso do INMET hoje", sub = "";
+    if (sel >= 0) {
+      const pos = (D.m[sel] || []).slice().sort((x, y) => D.alertas[x].h - D.alertas[y].h || D.alertas[y].sev - D.alertas[x].sev), foc = D.f[sel];
+      const p = pilSel >= 0 && pos.includes(pilSel) ? pilSel : pos[0], at = p != null ? D.alertas[p] : null;
+      if (camada === "focos" && foc > 0) { tipo = "fogo"; palavra = "Focos de calor"; sub = "detecções de satélite em 24 h"; }
+      else if (at) { tipo = tipoCeu(at); palavra = at.t; sub = NOME_SEV[at.sev] + (at.h ? " · previsto para " + diaTxt(at.ini) : " · hoje"); }
+      else if (foc > 0) { tipo = "fogo"; palavra = "Focos de calor"; sub = "detecções de satélite em 24 h"; }
+    } else {
+      const cod = selUf; let topo = destaquePos >= 0 ? D.alertas[destaquePos] : null;
+      if (!topo) for (let p = 0; p < D.alertas.length; p++) { const a = D.alertas[p]; if (a.h !== 0) continue; if (cod) { let ok = false; for (const i of membros[p] || []) if (codUf(i) === cod) { ok = true; break; } if (!ok) continue; } topo = a; break; }
+      if (camada === "focos") { tipo = "fogo"; palavra = "Focos de calor"; sub = "detecções de satélite em 24 h"; }
+      else if (topo) { tipo = tipoCeu(topo); palavra = topo.t; sub = NOME_SEV[topo.sev] + (cod ? " · " + UFS[cod] : " · " + siglas(topo.uf)); }
+    }
+    const chave = tipo + "|" + palavra; const ani = ultimoCeu !== chave; ultimoCeu = chave;
+    el.hidden = false; el.className = "ceu " + tipo + (ani ? " ani" : "");
+    el.innerHTML = camadasCeu(tipo) + `<div class="ceu-c">${icoCeu(tipo)}<div class="pal"><b>${esc(palavra)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</div></div>`;
+  }
+
   // ---------- aba Avisos ----------
   function resumoBr(cod = 0) { // cod = 0: Brasil; senão, só os municípios daquele estado
     const ix = cod ? idxUf(cod) : null, c = { 1: 0, 2: 0, 3: 0 }, top = []; let focos = 0;
@@ -226,6 +279,7 @@
   const linhaAviso = ([a, p]) => { const ab = p === destaquePos;
     return `<li><button type="button" class="rw sev-${a.sev}${ab ? " on" : ""}" data-alerta="${p}" aria-expanded="${ab}">${icone(a)}<span class="rw-tx"><b>${esc(a.t)}</b><small><span class="tag sev-${a.sev}">${NOME_SEV[a.sev] || ""}</span> ${esc(siglas(a.uf))}</small></span><span class="rw-n"><b>${fmt(a.n)}</b><small>municípios</small></span></button>${ab ? textoAviso(a, true) : ""}</li>`; };
   function pintaAgora() {
+    pintaCeu();
     const el = $("#aba-agora");
     if (!D) { el.innerHTML = erroDados ? '<div class="estado-msg" role="alert"><p><b>Não foi possível buscar os alertas agora.</b> As fontes (INMET e INPE) ou a sua conexão não responderam.</p><button type="button" class="btn" data-tenta="dados">Tentar de novo</button></div>' : '<div class="estado-msg" aria-busy="true"><span class="esq-linha"></span><span class="esq-linha"></span><span class="esq-linha curta"></span></div>'; return; }
     el.innerHTML = sel >= 0 ? municipio(sel) : brasil();
