@@ -46,4 +46,7 @@ assert.deepEqual(nome(localiza("Morreram 23 bezerros em fazenda", "")), [], "pal
 assert.deepEqual(nome(localiza("Chuva forte atinge o interior de São Paulo", "")), [], "interior de X não é a cidade X");
 assert.deepEqual(nome(localiza("Chuva em Bom Jesus (PI)", "")).length, 1, "nome repetido resolvido pela sigla");
 assert.deepEqual(nome(localiza("Chuva forte no Rio Grande do Sul", "")), [], "estado não vira município");
+assert.deepEqual(localiza("Previsão do tempo hoje para Brasília (DF): sol", "Goiânia Curitiba Niterói Recife Manaus Belém Natal", 53).m.length, 1, "resumo com lista de capitais não vira lugar da notícia");
+assert.deepEqual(localiza("Chuva forte no litoral", "", 33), { m: [], s: [33] }, "sem lugar no texto vale o estado do feed");
+assert.deepEqual(localiza("Previsão do tempo para Porto Alegre", "", 33).s, [43], "estado do feed não entra quando o texto cita outro lugar");
 console.log("ok: todos os testes passaram");
