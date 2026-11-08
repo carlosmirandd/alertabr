@@ -304,6 +304,10 @@ html.com-ads { --safe-b: calc(env(safe-area-inset-bottom, 0px) + var(--ad-h)); }
   .pils { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.4) transparent; } .pils::-webkit-scrollbar { display: block; height: 6px; } .pils::-webkit-scrollbar-thumb { background: rgba(255,255,255,.4); border-radius: 3px; }
 }
 
+.crumbs { display: flex; align-items: center; gap: 2px; margin: 0 0 1px -4px; font-size: 12px; color: var(--on3); } .crumbs[hidden] { display: none; }
+.crumbs button { background: none; border: 0; padding: 0 4px; min-height: 26px; color: var(--on2); font: inherit; font-weight: 600; cursor: pointer; border-radius: 8px; } .crumbs button:hover { background: color-mix(in srgb, var(--on) 10%, transparent); text-decoration: underline; } .crumbs b { padding: 0 4px; color: var(--on); }
+@media (max-height: 559px) and (orientation: landscape) { .crumbs { display: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   .dot, .esq, .gt, .gota, .raio, .fl, .vt, .br, .c-n, .raios, .rs { animation: none !important; } .ceu.ani { animation: none; }
   .btn, .pil, .barra-p i, .grip .ic, .camadas button { transition: none; }

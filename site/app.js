@@ -90,6 +90,10 @@
     $("#bb3").style.width = (r.sev[3] / tot * 100) + "%"; $("#bb2").style.width = (r.sev[2] / tot * 100) + "%"; $("#bb1").style.width = (r.sev[1] / tot * 100) + "%";
     document.querySelectorAll("#filtros [data-sev]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.sev === filtroSev && camada === "alertas")));
     $("#filtros [data-camada]").setAttribute("aria-pressed", String(camada === "focos"));
+    const cr = $("#crumbs"); // caminho clicável: Brasil › Estado › Município
+    if (sel >= 0) cr.innerHTML = `<button type="button" data-limpa="1">Brasil</button><span>›</span><button type="button" data-uf="${codUf(sel)}">${esc(NOME_UF[codUf(sel)])}</button>`;
+    else if (selUf) cr.innerHTML = '<button type="button" data-limpa="1">Brasil</button><span>›</span><b>' + esc(NOME_UF[selUf]) + "</b>";
+    cr.hidden = sel < 0 && !selUf;
     if (sel >= 0) {
       const al = alertasDe(sel).filter((x) => x.h === 0), foc = D.f[sel];
       $("#hTitulo").textContent = G.n[sel] + " · " + ufDe(sel);
@@ -356,6 +360,7 @@
     document.addEventListener("keydown", (e) => { if (e.key === "/" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) { e.preventDefault(); abreBusca(); } });
     $("#buscaIc").addEventListener("click", abreBusca);
     $("#aba-agora").addEventListener("wheel", (e) => { const p = e.target.closest(".pils"); if (p && p.scrollWidth > p.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { p.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false }); // roda do mouse rola a faixa de avisos na horizontal
+    $("#crumbs").addEventListener("click", (e) => { const t = e.target.closest("button"); if (!t) return; if (t.dataset.uf) selecionaUf(+t.dataset.uf); else { seleciona(-1); mapa.resetar(); } });
     $("#painel").addEventListener("click", (e) => {
       const t = e.target.closest("[data-pil],[data-alerta],[data-cid],[data-ir],[data-uf],[data-limpa],[data-tema],[data-fmt],[data-baixa],[data-comp],[data-fut]"); if (!t || t === document.documentElement || !e.currentTarget.contains(t)) return; const d = t.dataset; // <html data-tema="escuro"> também casa com o seletor: ignora tudo que está fora do painel
       if (d.pil != null) { const p = +d.pil; if (sel >= 0) { pilSel = p; pintaAgora(); } else { destaquePos = destaquePos === p ? -1 : p; mapa.setDestaque(destaquePos >= 0 ? membros[p] : null); if (destaquePos >= 0) { setCamada("alertas"); mapa.zoomLista([...membros[p]]); } pintaAgora(); } }
