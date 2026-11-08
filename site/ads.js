@@ -14,17 +14,21 @@
 
   var barra = document.createElement("aside");
   barra.className = "anuncio"; barra.setAttribute("aria-label", "Publicidade");
-  de.style.setProperty("--ad-h", h + "px"); de.classList.add("com-ads");
+  barra.classList.add("espera"); // invisível e sem reservar espaço até o Google entregar um anúncio (evita faixa vazia antes da aprovação ou sem anúncio)
+  var mostrou = false;
+  function mostra() { if (mostrou) return; mostrou = true; barra.classList.remove("espera"); de.style.setProperty("--ad-h", h + "px"); de.classList.add("com-ads"); window.dispatchEvent(new Event("resize")); if (lê() !== "p" && lê() !== "n") aviso(); }
   document.addEventListener("DOMContentLoaded", function () { document.body.appendChild(barra); });
   if (document.body) document.body.appendChild(barra);
 
   // O script do AdSense já vem no <head> do index.html (carrega na abertura da página). Aqui só desenhamos a faixa e escolhemos o tipo de anúncio.
   function carrega(personalizado) {
-    if (demo && (!A.cliente || !slot)) { barra.innerHTML = '<div class="ad-demo"><small>Publicidade</small><b>Espaço do anúncio ' + (movel ? "320×50" : "728×90") + ' (modo demonstração)</b></div>'; return; }
+    if (demo && (!A.cliente || !slot)) { barra.innerHTML = '<div class="ad-demo"><small>Publicidade</small><b>Espaço do anúncio ' + (movel ? "320×50" : "728×90") + ' (modo demonstração)</b></div>'; mostra(); return; }
     window.adsbygoogle = window.adsbygoogle || [];
     if (!personalizado) window.adsbygoogle.requestNonPersonalizedAds = 1;
     barra.innerHTML = '<ins class="adsbygoogle" style="display:inline-block;width:' + (movel ? 320 : 728) + "px;height:" + h + 'px" data-ad-client="' + A.cliente + '" data-ad-slot="' + slot + '"></ins><small class="ad-rot">Publicidade</small>';
-    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* anúncio bloqueado: a faixa fica vazia */ }
+    var ins = barra.querySelector("ins");
+    new MutationObserver(function () { if (ins.getAttribute("data-ad-status") === "filled") mostra(); }).observe(ins, { attributes: true, attributeFilter: ["data-ad-status"] });
+    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* anúncio bloqueado: a faixa continua escondida */ }
   }
 
   // Aviso curto (não bloqueia nada): o anúncio já carregou. Quem quiser pode pedir anúncios sem personalização (vale a partir do recarregamento).
@@ -36,5 +40,5 @@
     document.addEventListener("DOMContentLoaded", function () { document.body.appendChild(b); });
     if (document.body) document.body.appendChild(b);
   }
-  var v = lê(); carrega(v !== "n"); if (v !== "p" && v !== "n") aviso();
+  carrega(lê() !== "n");
 })();
