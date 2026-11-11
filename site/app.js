@@ -120,7 +120,7 @@
     if (sel >= 0) cr.innerHTML = `<button type="button" data-limpa="1">Brasil</button><span>›</span><button type="button" data-uf="${codUf(sel)}">${esc(NOME_UF[codUf(sel)])}</button>`;
     else if (selUf) cr.innerHTML = '<button type="button" data-limpa="1">Brasil</button><span>›</span><b>' + esc(NOME_UF[selUf]) + "</b>";
     cr.hidden = sel < 0 && !selUf; $("#filtros").hidden = sel >= 0; // no município, a contagem por gravidade não se aplica
-    if (folha() && altura === "baixo") requestAnimationFrame(() => folhaPara("baixo")); // o cabeçalho mudou de tamanho: a folha recolhida acompanha
+    if (folha() && (altura === "baixo" || altura === "min")) requestAnimationFrame(() => folhaPara(altura)); // o cabeçalho mudou de tamanho: a folha recolhida acompanha
     if (sel >= 0) {
       const al = alertasDe(sel).filter((x) => x.h === 0), foc = D.f[sel];
       $("#hTitulo").textContent = G.n[sel] + " · " + ufDe(sel);
@@ -159,13 +159,13 @@
   }
   function seleciona(i, semZoom) {
     sel = i; selUf = 0; destaquePos = -1; pilSel = -1; verFut = false; mapa.setDestaque(null); mapa.setSel(i);
-    if (i >= 0) { if (folha()) folhaPara("meio"); if (!semZoom) mapa.zoomPara(i); }
+    if (i >= 0) { if (folha() && altura !== "min") folhaPara("meio"); if (!semZoom) mapa.zoomPara(i); }
     gravaURL(true);
     $("#q").value = i >= 0 ? G.n[i] : ""; pintaHero(); pintaAgora(); pintaNoticias(); pintaCartao();
   }
   function selecionaUf(cod) { // visão do estado: resumo, avisos, focos e notícias só dele
     sel = -1; selUf = cod; destaquePos = -1; pilSel = -1; verFut = false; mapa.setDestaque(null); mapa.setSel(-1);
-    if (folha()) folhaPara("meio");
+    if (folha() && altura !== "min") folhaPara("meio");
     gravaURL(true); mapa.zoomLista(idxUf(cod)); $("#q").value = NOME_UF[cod];
     pintaHero(); pintaAgora(); pintaNoticias(); pintaCartao();
   }
@@ -272,7 +272,7 @@
     el.hidden = false; el.setAttribute("aria-label", sel >= 0 ? "Tempo agora em " + G.n[sel] : "Resumo dos avisos");
     el.className = "ceu " + tipo + (ani ? " ani" : "");
     el.innerHTML = camadasCeu(tipo) + h;
-    if (folha() && altura === "baixo") requestAnimationFrame(() => folhaPara("baixo"));
+    if (folha() && (altura === "baixo" || altura === "min")) requestAnimationFrame(() => folhaPara(altura));
   }
 
   // ---------- aba Avisos ----------
@@ -434,30 +434,32 @@
   function alturasFolha() {
     const p = $("#painel"), fundo = innerHeight - p.getBoundingClientRect().bottom, topo = $("#barra").getBoundingClientRect().bottom + 8;
     const max = Math.max(200, innerHeight - fundo - topo), baixo = Math.min(max, $("#grip").offsetHeight + $("#pCab").offsetHeight + 4);
-    return { baixo, meio: Math.max(baixo, Math.min(max, Math.round(innerHeight * 0.55))), alto: max };
+    // min: puxador, caminho, nome do lugar e a linha-resumo (mapa quase todo livre). Medido pelo fim do subtítulo, que não muda com a altura do painel.
+    const t = $("#hSub").getBoundingClientRect(), pt = p.getBoundingClientRect().top - p.scrollTop, min = Math.min(baixo, Math.max($("#grip").offsetHeight + 40, Math.round(t.bottom - pt + 12)));
+    return { min, baixo, meio: Math.max(baixo, Math.min(max, Math.round(innerHeight * 0.55))), alto: max };
   }
   function folhaPara(h) {
     const p = $("#painel"), g = $("#grip");
     if (desk()) { p.style.height = ""; p.dataset.altura = ""; document.documentElement.style.removeProperty("--folha"); document.documentElement.classList.remove("folha-alta"); return; }
-    altura = h; const px = alturasFolha()[h]; p.style.height = px + "px"; p.dataset.altura = h; if (h === "baixo") p.scrollTop = 0;
+    altura = h; const px = alturasFolha()[h]; p.style.height = px + "px"; p.dataset.altura = h; if (h === "baixo" || h === "min") p.scrollTop = 0;
     document.documentElement.style.setProperty("--folha", px + "px");
     document.documentElement.classList.toggle("folha-alta", h === "alto");
-    g.setAttribute("aria-expanded", String(h !== "baixo")); g.setAttribute("aria-label", h === "alto" ? "Recolher painel" : "Mostrar mais");
+    g.setAttribute("aria-expanded", String(h !== "baixo" && h !== "min")); g.setAttribute("aria-label", h === "min" ? "Mostrar o painel" : h === "alto" ? "Recolher o painel para liberar o mapa" : "Mostrar mais");
     clearTimeout(tRefit); tRefit = setTimeout(() => { if (mapa && mapa.fitBrasil && mapa.refit) mapa.refit(); }, 280);
   }
   function ligaFolha() {
     const p = $("#painel"); let y0 = 0, h0 = 0, ativo = false, moveu = false;
     const ini = (e) => { if (desk() || (e.button && e.button > 0)) return; if (e.target.closest("button, a, input") && !e.target.closest("#grip")) return; ativo = true; moveu = false; y0 = e.clientY; h0 = p.offsetHeight; e.currentTarget.setPointerCapture(e.pointerId); };
-    const mov = (e) => { if (!ativo) return; const dy = y0 - e.clientY; if (!moveu && Math.abs(dy) < 6) return; if (!moveu) { moveu = true; p.classList.add("arrastando"); } const a = alturasFolha(); p.style.height = Math.max(a.baixo, Math.min(a.alto, h0 + dy)) + "px"; };
-    const fim = () => { if (!ativo) return; ativo = false; p.classList.remove("arrastando"); if (!moveu) return; const h = p.offsetHeight, a = alturasFolha(); folhaPara(["baixo", "meio", "alto"].reduce((m, k) => (Math.abs(a[k] - h) < Math.abs(a[m] - h) ? k : m), "baixo")); $("#grip").dataset.arrastou = "1"; setTimeout(() => delete $("#grip").dataset.arrastou, 80); };
+    const mov = (e) => { if (!ativo) return; const dy = y0 - e.clientY; if (!moveu && Math.abs(dy) < 6) return; if (!moveu) { moveu = true; p.classList.add("arrastando"); } const a = alturasFolha(); p.style.height = Math.max(a.min, Math.min(a.alto, h0 + dy)) + "px"; };
+    const fim = () => { if (!ativo) return; ativo = false; p.classList.remove("arrastando"); if (!moveu) return; const h = p.offsetHeight, a = alturasFolha(); folhaPara(["min", "baixo", "meio", "alto"].reduce((m, k) => (Math.abs(a[k] - h) < Math.abs(a[m] - h) ? k : m), "baixo")); $("#grip").dataset.arrastou = "1"; setTimeout(() => delete $("#grip").dataset.arrastou, 80); };
     for (const el of [$("#grip"), $("#pCab")]) { el.addEventListener("pointerdown", ini); el.addEventListener("pointermove", mov); el.addEventListener("pointerup", fim); el.addEventListener("pointercancel", fim); }
-    $("#grip").addEventListener("click", () => { if ($("#grip").dataset.arrastou) return; folhaPara(altura === "baixo" ? "meio" : altura === "meio" ? "alto" : "baixo"); });
+    $("#grip").addEventListener("click", () => { if ($("#grip").dataset.arrastou) return; folhaPara(altura === "min" ? "baixo" : altura === "baixo" ? "meio" : altura === "meio" ? "alto" : "min"); }); // toque no puxador: abre em etapas e, na última, recolhe tudo
   }
   function trocaAba(a, foco) {
     aba = a;
     for (const t of document.querySelectorAll(".abas [role=tab]")) { const on = t.dataset.aba === a; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; $("#aba-" + t.dataset.aba).hidden = !on; }
     if (a === "noticias") pintaNoticias(); else if (a === "cartao") pintaCartao();
-    if (folha() && altura === "baixo" && !lendoURL) folhaPara("meio");
+    if (folha() && (altura === "baixo" || altura === "min") && !lendoURL) folhaPara("meio");
     gravaURL(false);
     if (foco) $("#t-" + a).focus();
     $("#pCorpo").scrollTop = 0; if (folha()) { const p = $("#painel"), ab = $(".abas"); if (p.scrollTop > ab.offsetTop - 28) p.scrollTop = ab.offsetTop - 28; }

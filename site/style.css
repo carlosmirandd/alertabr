@@ -220,7 +220,7 @@ a { color: inherit; text-underline-offset: 2px; }
 .folha-alta .leg, .folha-alta .zoom { visibility: hidden; }
 /* folha do celular: tudo rola junto (o cabeçalho sai de cena e a lista ganha espaço); puxador e abas ficam presos no topo */
 .painel { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-.painel[data-altura="baixo"] { overflow: hidden; }
+.painel[data-altura="baixo"], .painel[data-altura="min"] { overflow: hidden; }
 .painel > .grip { position: sticky; top: 0; z-index: 2; background: var(--s0); }
 .painel .abas { position: sticky; top: 28px; z-index: 2; background: var(--s0); }
 .painel .p-corpo { flex: none; overflow: visible; }
