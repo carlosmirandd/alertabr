@@ -11,7 +11,7 @@ import { relevante, temasDe, sem } from "../shared/relevancia.mjs";
 const aqui = (p) => fileURLToPath(new URL(p, import.meta.url));
 const GEO = JSON.parse(readFileSync(aqui("../site/data/municipios.json"), "utf8"));
 const CFG = JSON.parse(readFileSync(aqui("./feeds.json"), "utf8"));
-const DIAS = 7, MAX = 450;
+const DIAS = 7, DIAS_SEM_LUGAR = 3, MAX = 1200; // memória: notícia ligada a município fica 7 dias; sem lugar, 3
 
 export const UFN = { 11: "RO", 12: "AC", 13: "AM", 14: "RR", 15: "PA", 16: "AP", 17: "TO", 21: "MA", 22: "PI", 23: "CE", 24: "RN", 25: "PB", 26: "PE", 27: "AL", 28: "SE", 29: "BA", 31: "MG", 32: "ES", 33: "RJ", 35: "SP", 41: "PR", 42: "SC", 43: "RS", 50: "MS", 51: "MT", 52: "GO", 53: "DF" };
 const ABR = new Map(Object.entries(UFN).map(([c, a]) => [a.toLowerCase(), +c]));
@@ -20,6 +20,17 @@ const ESTADOS = [["acre", 12], ["alagoas", 27], ["amapa", 16], ["amazonas", 13],
 const AMBIGUO = new Set("natal salvador vitoria palmas serra formosa uniao esperanca planalto liberdade progresso campos alegre grande nova bonito bom jardim ouro prata mirante cruzeiro palmeiras santos fortaleza guarani mimoso estrela carmo lagoa paz wagner conquista central virginia catarina bandeira florestal montadas cavalcante barra sertao paraibano amapa tocantins goias riacho vila porto".split(" "));
 
 const CAPITAIS = new Set(["natal", "salvador", "vitoria", "palmas", "fortaleza"]); // únicos ambíguos aceitos sem sigla, em feed do próprio estado
+const APELIDO = [ // [expressão normalizada, código IBGE, estado do feed exigido (0 = qualquer)]
+  ["bh", 3106200, 0], ["floripa", 4205407, 0], ["poa", 4314902, 0], ["sampa", 3550308, 0], ["jampa", 2507507, 0], ["capital paulista", 3550308, 0], ["capital fluminense", 3304557, 0],
+  ["capital mineira", 3106200, 0], ["capital gaucha", 4314902, 0], ["capital paranaense", 4106902, 0], ["capital catarinense", 4205407, 0], ["capital baiana", 2927408, 0],
+  ["capital pernambucana", 2611606, 0], ["capital cearense", 2304400, 0], ["capital federal", 5300108, 0], ["capital capixaba", 3205309, 0], ["capital potiguar", 2408102, 0],
+  ["capital paraibana", 2507507, 0], ["capital alagoana", 2704302, 0], ["capital sergipana", 2800308, 0], ["capital maranhense", 2111300, 0], ["capital piauiense", 2211001, 0],
+  ["capital paraense", 1501402, 0], ["capital amazonense", 1302603, 0], ["capital goiana", 5208707, 0], ["capital sul mato grossense", 5002704, 0], ["capital mato grossense", 5103403, 0],
+  ["capital acreana", 1200401, 0], ["capital rondoniense", 1100205, 0], ["capital roraimense", 1400100, 0], ["capital amapaense", 1600303, 0], ["capital tocantinense", 1721000, 0],
+  ["rio", 3304557, 33], ["capital", -1, -1], // "Rio" só em feed do RJ; "capital" sozinha = capital do estado do feed regional
+];
+const CAPITAL_UF = { 11: 1100205, 12: 1200401, 13: 1302603, 14: 1400100, 15: 1501402, 16: 1600303, 17: 1721000, 21: 2111300, 22: 2211001, 23: 2304400, 24: 2408102, 25: 2507507, 26: 2611606, 27: 2704302, 28: 2800308, 29: 2927408, 31: 3106200, 32: 3205309, 33: 3304557, 35: 3550308, 41: 4106902, 42: 4205407, 43: 4314902, 50: 5002704, 51: 5103403, 52: 5208707, 53: 5300108 };
+const IDX_COD = new Map(GEO.c.map((c, i) => [c, i]));
 const porNome = new Map();
 GEO.n.forEach((n, i) => { const k = sem(n).replace(/[^a-z0-9]+/g, " ").trim(); (porNome.get(k) || porNome.set(k, []).get(k)).push(i); });
 const ufDe = (i) => Math.floor(GEO.c[i] / 100000);
@@ -54,11 +65,21 @@ function achaLugares(txt, ufFeed) {
       if (esc.length === 1 && tira(txtOrig).includes(tira(GEO.n[esc[0]])) && !regiaoAntes(w, i)) { achados.add(esc[0]); add(ufDe(esc[0])); i += n - 1; break; }
     }
   }
+  if (!achados.size) { // nenhum nome oficial: tenta apelidos ("BH", "capital paulista", "Rio" em feed do RJ, "capital" em feed regional)
+    const bruto = " " + sem(txt).replace(/[^a-z0-9]+/g, " ") + " ";
+    for (const [exp, cod, ufReq] of APELIDO) {
+      if (!bruto.includes(" " + exp + " ")) continue;
+      if (exp === "rio" && !/\bRio\b(?! [A-ZÁÉÍÓÚÂÊÔ]| d[aeo]s? )/.test(txt)) continue; // "Rio" como cidade: com maiúscula e sem ser "Rio Grande", "Rio das Ostras", "rio Paraíba"
+      if (exp.length <= 4 && exp !== "rio" && !new RegExp("\\b" + exp.toUpperCase() + "\\b").test(txt) && !new RegExp("\\b" + exp[0].toUpperCase() + exp.slice(1) + "\\b").test(txt)) continue; // sigla/apelido curto precisa estar em maiúscula ou capitalizado
+      const c = ufReq === -1 ? CAPITAL_UF[ufFeed] : (ufReq && ufReq !== ufFeed ? 0 : cod), i = c ? IDX_COD.get(c) : null;
+      if (i != null) { achados.add(i); add(ufDe(i)); break; }
+    }
+  }
   return { m: [...achados].slice(0, 4), s: [...det].filter(Boolean) };
 }
 export function localiza(titulo, resumo, ufFeed = 0) {
   const t = achaLugares(titulo, ufFeed);
-  if (t.m.length || t.s.length) return t; // o título manda
+  if (t.m.length || t.s.length) return { ...t, tit: t.m.length ? 1 : 0 }; // o título manda
   const r = achaLugares(resumo, ufFeed);
   if (r.m.length > 3) return { m: [], s: ufFeed ? [ufFeed] : [] }; // resumo que lista várias cidades (previsão, balanço) não diz de onde é a notícia
   return r.m.length || r.s.length ? r : { m: [], s: ufFeed ? [ufFeed] : [] }; // sem lugar no texto: vale o estado do feed regional
@@ -82,6 +103,15 @@ export function leFeed(xml) {
 const toks = (t) => new Set(sem(t).split(/[^a-z0-9]+/).filter((w) => w.length > 3));
 const jac = (a, b) => { let i = 0; for (const x of a) if (b.has(x)) i++; return i / (a.size + b.size - i || 1); };
 
+// Peso da notícia (0 a 10), usado para ordenar: termos de impacto e de alerta valem mais que matéria de rotina.
+const IMPACTO = /\b(mort[eo]s?|morre|morrem|desaparecid|desabrigad|desalojad|ferid|soterrad|evacua|resgat|destrui|destelh|calamidade|emergencia|tornado|ciclone|deslizament|enchente|inundac|rompe|rompimento|alerta vermelho|grande perigo|interdita|bloqueia|sem energia|sem luz)/;
+const ALERTA = /\b(alerta|aviso|defesa civil|inmet|cemaden|risco)/;
+export function pesoDe(titulo, oficial) {
+  const t = sem(titulo); let p = 3;
+  if (IMPACTO.test(t)) p += 4; if (ALERTA.test(t)) p += 2; if (oficial) p += 1;
+  if (/^(veja|saiba|entenda|confira|video|fotos|ao vivo)\b/.test(t)) p -= 1; // serviço/galeria: útil, mas atrás do fato
+  return Math.max(0, Math.min(10, p));
+}
 async function umFeed(f) {
   const xml = await baixa(f.url, "text", 2, 20000);
   const lim = Date.now() - DIAS * 864e5, out = [];
@@ -91,7 +121,7 @@ async function umFeed(f) {
     if (pv && (!it.d || Date.now() - it.d > 30 * 36e5)) continue;
     if (!f.semFiltro && !pv && !relevante(it.t, it.r)) continue;
     const tm = temasDe(it.t, it.r), loc = localiza(it.t, it.r, f.uf || 0);
-    out.push({ t: it.t.slice(0, 170), u: it.u, f: f.nome, d: it.d || Date.now(), tm: tm.length ? tm : ["geral"], m: loc.m, s: loc.s, ...(f.oficial ? { o: 1 } : {}), ...(pv ? { pv: 1 } : {}) });
+    out.push({ t: it.t.slice(0, 170), u: it.u, f: f.nome, d: it.d || Date.now(), tm: tm.length ? tm : ["geral"], m: loc.m, s: loc.s, p: pv ? 1 : pesoDe(it.t, f.oficial), ...(loc.tit ? { mt: 1 } : {}), ...(f.oficial ? { o: 1 } : {}), ...(pv ? { pv: 1 } : {}) });
   }
   return out;
 }
@@ -129,19 +159,20 @@ export async function coletaNoticias(previo = null) {
     if (r.status === "fulfilled") { fontes[f.id] = { ok: true, n: r.value.length }; todas.push(...r.value); }
     else fontes[f.id] = { ok: false, erro: String(r.reason && r.reason.message).slice(0, 80) };
   });
-  // feed que caiu: mantém o que ele tinha no arquivo anterior (evita a lista piscar por uma falha de 5 minutos)
-  if (previo && Array.isArray(previo.itens)) {
-    const nomeDe = new Map(feeds.map((f) => [f.nome, f.id])), caidos = new Set(Object.keys(fontes).filter((k) => !fontes[k].ok));
-    for (const it of previo.itens) { const id = nomeDe.get(it.f); if (id && caidos.has(id) && Date.now() - it.d < DIAS * 864e5) todas.push(it); }
-  }
+  // MEMÓRIA: os feeds só trazem as últimas dezenas de matérias, então o que já foi coletado continua no arquivo até vencer o prazo
+  // (7 dias se cita município, 3 dias se não). É isso que dá notícia para cidade pequena. Também cobre um feed que caiu por alguns minutos.
+  const agora = Date.now(), vale = (it) => agora - it.d < (it.m && it.m.length ? DIAS : DIAS_SEM_LUGAR) * 864e5 && (!it.pv || agora - it.d < 30 * 36e5);
+  const ativos = new Set(feeds.map((f) => f.nome));
+  if (previo && Array.isArray(previo.itens)) for (const it of previo.itens) if (ativos.has(it.f) && vale(it) && !it.t.includes("\uFFFD")) todas.push({ p: 3, ...it }); // fonte desativada sai junto com as suas matérias
   // junta a mesma URL e títulos muito parecidos (guarda o oficial/mais recente e conta as fontes)
-  const porUrl = new Map(); for (const it of todas) if (!porUrl.has(it.u)) porUrl.set(it.u, it);
+  const porUrl = new Map(); for (const it of todas) if (vale(it) && !porUrl.has(it.u)) porUrl.set(it.u, it); // a versão nova (desta rodada) vem antes da guardada
   const grupos = [];
   for (const it of [...porUrl.values()].sort((a, b) => (b.o || 0) - (a.o || 0) || b.d - a.d)) {
     const tk = toks(it.t), mesmo = (a, b) => a.length === b.length && a.every((x) => b.includes(x)), g = grupos.find((x) => jac(x.tk, tk) > 0.55 && mesmo(x.m, it.m) && mesmo(x.s, it.s)); // só junta títulos parecidos que falam dos MESMOS lugares
-    if (g) g.n++; else grupos.push({ ...it, tk, n: 1 });
+    if (g) { if (g.f !== it.f) g.n = Math.max(g.n, 1) + 1; } else grupos.push({ ...it, tk, n: it.n || 1 });
   }
-  const itens = grupos.sort((a, b) => b.d - a.d).slice(0, MAX).map(({ tk, ...x }) => x);
+  // limite de tamanho: primeiro saem as mais velhas SEM município; as que citam município são as últimas a sair
+  const itens = grupos.sort((a, b) => (b.m.length ? 1 : 0) - (a.m.length ? 1 : 0) || b.d - a.d).slice(0, MAX).sort((a, b) => b.d - a.d).map(({ tk, ...x }) => x);
   const ev = await Promise.allSettled([gdacs(), usgs()]);
   fontes.gdacs = ev[0].status === "fulfilled" ? { ok: true, n: ev[0].value.length } : { ok: false, erro: String(ev[0].reason && ev[0].reason.message).slice(0, 80) };
   fontes.usgs = ev[1].status === "fulfilled" ? { ok: true, n: ev[1].value.length } : { ok: false, erro: String(ev[1].reason && ev[1].reason.message).slice(0, 80) };

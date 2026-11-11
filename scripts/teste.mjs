@@ -62,4 +62,10 @@ assert.equal(simbolo("rainshowersandthunder_day").tipo, "tempestade"); assert.eq
 const serie = (h, t, cod, mm) => ({ time: new Date(Date.UTC(2026, 10, 11, h)).toISOString(), data: { instant: { details: { air_temperature: t, wind_speed: 5, relative_humidity: 80 } }, next_1_hours: { summary: { symbol_code: cod }, details: { precipitation_amount: mm } } } });
 const rt = resume({ properties: { meta: { updated_at: "2026-11-11T12:00:00Z" }, timeseries: [serie(12, 20, "cloudy", 0), serie(15, 26, "rain", 2), serie(18, 24, "rainandthunder", 5), serie(36, 18, "clearsky_day", 0)] } }, -3, Date.UTC(2026, 10, 11, 12));
 assert.equal(rt.agora.temp, 20); assert.equal(rt.agora.tipo, "nuvem"); assert.equal(rt.dias[0].max, 26); assert.equal(rt.dias[0].tipo, "tempestade", "o dia é representado pelo pior tempo"); assert.equal(rt.dias[0].chuva, 7);
+// --- motor de notícias: apelidos, peso, "Lei Seca" ---
+const { pesoDe } = await import("../relay/noticias.mjs");
+assert.ok(!relevante("Motociclista é preso em blitz da Lei Seca"), "Lei Seca não é seca"); assert.ok(relevante("Seca afeta 160 mil famílias no Amazonas"));
+assert.deepEqual(nome(localiza("Temporal alaga ruas de BH", "")), ["Belo Horizonte"]); assert.deepEqual(nome(localiza("Chuva forte atinge o Rio e fecha túnel", "", 33)), ["Rio de Janeiro"]);
+assert.deepEqual(nome(localiza("Nível do rio sobe e preocupa moradores", "", 33)), [], "rio (curso d'água) não é a cidade"); assert.deepEqual(nome(localiza("Temporal alaga ruas da capital", "", 43)), ["Porto Alegre"]);
+assert.ok(pesoDe("Temporal deixa dois mortos e 300 desabrigados") > pesoDe("Veja a previsão para o fim de semana"));
 console.log("ok: todos os testes passaram");

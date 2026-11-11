@@ -363,15 +363,24 @@
   const tok = (t) => new Set(norm(t).split(/[^a-z0-9]+/).filter((w) => w.length > 3));
   const jac = (a, b) => { let i = 0; for (const x of a) if (b.has(x)) i++; return i / (a.size + b.size - i || 1); };
   const semRepetidos = (lista) => { const out = [], ts = []; for (const n of lista) { const k = tok(n.t); if (ts.some((x) => jac(x, k) > 0.55)) continue; ts.push(k); out.push(n); } return out; };
-  function listaDoFeed(j) { // monta a ordem: o do município, depois o do estado, depois o do Brasil
-    const t = tema, uf = sel >= 0 ? Math.floor(G.c[sel] / 100000) : 0, est = sel < 0 ? selUf : 0;
-    const ok = (n) => t === "todos" || n.tm.includes(t), ate = Date.now() - 4 * 864e5;
+  // ORDEM das notícias (pontuação): recência com meia-vida de 36 h + peso editorial dado pelo relay (impacto, alerta, fonte oficial)
+  // + quantos veículos deram a mesma notícia + (na cidade) se o nome dela está no título. Notícia grave de ontem fica acima de rotina de hoje.
+  const pontos = (n, local) => { const h = Math.max(0, (Date.now() - n.d) / 36e5); return 6 * Math.pow(0.5, h / 36) + (n.p != null ? n.p : 3) * 0.6 + Math.min(3, (n.n || 1) - 1) * 0.8 + (n.o ? 0.5 : 0) + (local && n.mt ? 2 : 0) + (n.nv || 0) * 2; };
+  const ordena = (l, local) => l.map((n) => [pontos(n, local), n]).sort((a, b) => b[0] - a[0]).map((x) => x[1]);
+  // distância em km entre os pontos de rótulo de dois municípios
+  const distKm = (a, b) => { const R = Math.PI / 180, la1 = G.p[2 * a + 1] / 1000 * R, la2 = G.p[2 * b + 1] / 1000 * R, dl = (G.p[2 * b] - G.p[2 * a]) / 1000 * R; return 6371 * Math.acos(Math.min(1, Math.sin(la1) * Math.sin(la2) + Math.cos(la1) * Math.cos(la2) * Math.cos(dl))); };
+  function listaDoFeed(j) {
+    const t = tema, est = sel < 0 ? selUf : 0;
+    const ok = (n) => t === "todos" || n.tm.includes(t), ate = Date.now() - 7 * 864e5, ateGeral = Date.now() - 3 * 864e5;
     const itens = (j.itens || []).filter((n) => ok(n) && n.d > ate && (sel >= 0 || !n.pv)); // previsão diária de cidade só aparece na visão da cidade
     const ev = (j.eventos || []).filter((e) => t === "outros" || (t === "todos" ? e.nv >= 2 : e.tm.includes(t) && e.nv >= 2));
-    if (est) return { principal: semRepetidos([...ev.filter((e) => t === "outros"), ...itens.filter((n) => n.s.includes(est))].sort((a, b) => (b.nv || 0) - (a.nv || 0) || b.d - a.d)), extra: [] };
-    if (sel < 0) return { principal: semRepetidos([...ev, ...itens].sort((a, b) => (b.nv || 0) - (a.nv || 0) || b.d - a.d)), extra: [] };
-    const loc = itens.filter((n) => n.m.includes(sel)), doEstado = itens.filter((n) => !n.m.includes(sel) && n.s.includes(uf));
-    return { principal: loc, extra: semRepetidos([...ev.filter((e) => t === "outros"), ...doEstado]) };
+    if (est) return { principal: semRepetidos(ordena([...ev.filter((e) => t === "outros"), ...itens.filter((n) => n.s.includes(est) && n.d > ateGeral)])), perto: [] };
+    if (sel < 0) return { principal: semRepetidos(ordena([...ev, ...itens.filter((n) => n.d > ateGeral)])), perto: [] };
+    const loc = ordena(itens.filter((n) => n.m.includes(sel)), true);
+    // na região: notícias que citam municípios a até 50 km (tempo severo é regional). Vêm separadas e com a cidade e a distância ditas.
+    const perto = [];
+    for (const n of itens) { if (n.pv || n.m.includes(sel) || n.d < ateGeral) continue; let melhor = null; for (const k of n.m) { const d = distKm(sel, k); if (d <= 50 && (!melhor || d < melhor.km)) melhor = { km: d, k }; } if (melhor) perto.push({ ...n, perto: G.n[melhor.k] + " · " + Math.max(1, Math.round(melhor.km)) + " km", km: melhor.km }); }
+    return { principal: loc, perto: semRepetidos(ordena(perto)).slice(0, 5) };
   }
   function pintaNoticias() {
     if (!noticiasVisivel()) { sujo.n = true; return; } sujo.n = false;
@@ -379,20 +388,21 @@
     el.innerHTML = `<h2 class="sec">${local ? "Notícias · " + esc(nome) : "Notícias · " + (est ? esc(NOME_UF[est]) : "Brasil")}</h2><div class="chips">${CHIPS.map(([k, n]) => `<button data-tema="${k}" aria-pressed="${tema === k}">${n}</button>`).join("")}</div><div id="listaN"><p class="vazio esq">Buscando notícias…</p></div>`;
     const q = (local ? `"${nome}" ${sigla} ` : est ? `"${NOME_UF[est]}" ` : "") + TEMAS[tema];
     let feed = undefined, api = undefined; // undefined = ainda carregando; null = falhou
-    const item = (n) => `<a class="not" href="${esc(n.u)}" target="_blank" rel="noopener noreferrer"><b>${esc(n.t)}</b><small>${esc(n.f || "")}${n.o ? " · oficial" : ""}${n.d ? " · " + ha(n.d) : ""}${n.n > 1 ? " · " + n.n + " fontes" : ""}</small></a>`;
+    const item = (n) => `<a class="not" href="${esc(n.u)}" target="_blank" rel="noopener noreferrer"><b>${esc(n.t)}</b><small>${n.perto ? `<span class="not-perto">${esc(n.perto)}</span> · ` : ""}${esc(n.f || "")}${n.o ? " · oficial" : ""}${n.d ? " · " + ha(n.d) : ""}${n.n > 1 ? " · " + n.n + " fontes" : ""}</small></a>`;
     const desenha = () => {
       const L = $("#listaN"); if (!L || ch !== sel + "|" + selUf + "|" + tema) return;
       if (feed === undefined && api === undefined) return;
-      const f = feed ? listaDoFeed(feed) : { principal: [], extra: [] }, a = (api && api.itens) || [];
+      const f = feed ? listaDoFeed(feed) : { principal: [], perto: [] }, a = (api && api.itens) || [];
       // município: o que cita a cidade vem primeiro (feeds, depois busca); sem nada local, mostra o estado e avisa
       const ap = local ? a.filter((n) => norm(n.t).includes(norm(nome))) : a;
-      let lista = semRepetidos(local ? [...f.principal, ...ap] : [...f.principal, ...a].sort((x, y) => (y.nv || 0) - (x.nv || 0) || y.d - x.d));
+      let lista = semRepetidos(local ? [...f.principal, ...ap] : ordena([...f.principal, ...a]));
+      const regiao = local && f.perto.length ? `<h2 class="sec">Na região (até 50 km)</h2>` + f.perto.map(item).join("") : "";
       let aviso = "";
-      if (local && !lista.length) aviso = `<p class="vazio esq">Nenhuma notícia recente sobre ${esc(nome)}.</p><button type="button" class="btn sec" style="margin:4px" data-uf="${codUf(sel)}">Ver notícias de ${esc(NOME_UF[codUf(sel)])}</button>`; // sem misturar com outras cidades
+      if (local && !lista.length) aviso = `<p class="vazio esq">Nenhuma notícia sobre ${esc(nome)} nos últimos 7 dias.</p><button type="button" class="btn sec" style="margin:4px" data-uf="${codUf(sel)}">Ver notícias de ${esc(NOME_UF[codUf(sel)])}</button>`; // sem misturar com outras cidades
       lista = lista.slice(0, 15);
       if ((feed === undefined || api === undefined) && !lista.length) return; // espera o outro lado antes de dizer que não há nada
       const falhou = feed === null && (api === null || (api && api.erro));
-      L.innerHTML = lista.length ? lista.map(item).join("") + aviso : falhou ? '<p class="vazio">Não foi possível buscar as notícias agora.</p><button type="button" class="btn" style="margin:4px" data-tenta="noticias">Tentar de novo</button>' : (local && aviso) ? aviso : `<p class="vazio">Nenhuma notícia recente sobre o assunto.</p><a class="btn sec" style="display:inline-flex;align-items:center;margin:4px" href="https://news.google.com/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener noreferrer">Buscar no Google Notícias</a>`;
+      L.innerHTML = lista.length ? lista.map(item).join("") + regiao + aviso : falhou ? '<p class="vazio">Não foi possível buscar as notícias agora.</p><button type="button" class="btn" style="margin:4px" data-tenta="noticias">Tentar de novo</button>' : (local && aviso) ? aviso + regiao : `<p class="vazio">Nenhuma notícia recente sobre o assunto.</p><a class="btn sec" style="display:inline-flex;align-items:center;margin:4px" href="https://news.google.com/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener noreferrer">Buscar no Google Notícias</a>`;
     };
     carregaFeed().then((j) => { feed = j; desenha(); });
     const c = cacheN.get(q); if (c && Date.now() - c.t < 600000) { api = c.j; desenha(); return; }
