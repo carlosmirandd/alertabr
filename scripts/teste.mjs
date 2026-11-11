@@ -56,4 +56,10 @@ assert.equal(mun.b.length, 4 * mun.c.length); assert.equal(mun.p.length, 2 * mun
 const { existsSync } = await import("node:fs");
 for (const t of ["0/0/0", "4/5/8", "8/94/138"]) assert.ok(existsSync(new URL(`../site/tiles/${t}.pbf`, import.meta.url)), "tile " + t);
 assert.ok(/<!--contorno--><svg class="contorno"/.test(readFileSync(new URL("../site/index.html", import.meta.url), "utf8")), "contorno do esqueleto embutido no HTML");
+// --- previsão do tempo (MET Norway -> cartão) ---
+const { simbolo, resume } = await import("../functions/api/tempo.js");
+assert.equal(simbolo("rainshowersandthunder_day").tipo, "tempestade"); assert.equal(simbolo("clearsky_night").tipo, "sol"); assert.equal(simbolo("heavyrain").txt, "Chuva forte");
+const serie = (h, t, cod, mm) => ({ time: new Date(Date.UTC(2026, 10, 11, h)).toISOString(), data: { instant: { details: { air_temperature: t, wind_speed: 5, relative_humidity: 80 } }, next_1_hours: { summary: { symbol_code: cod }, details: { precipitation_amount: mm } } } });
+const rt = resume({ properties: { meta: { updated_at: "2026-11-11T12:00:00Z" }, timeseries: [serie(12, 20, "cloudy", 0), serie(15, 26, "rain", 2), serie(18, 24, "rainandthunder", 5), serie(36, 18, "clearsky_day", 0)] } }, -3, Date.UTC(2026, 10, 11, 12));
+assert.equal(rt.agora.temp, 20); assert.equal(rt.agora.tipo, "nuvem"); assert.equal(rt.dias[0].max, 26); assert.equal(rt.dias[0].tipo, "tempestade", "o dia é representado pelo pior tempo"); assert.equal(rt.dias[0].chuva, 7);
 console.log("ok: todos os testes passaram");
