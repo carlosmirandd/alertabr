@@ -4,7 +4,7 @@
 //   node relay/relay.mjs                             loop: a cada 5 min envia para o R2 (precisa do wrangler logado)
 // Variáveis: BUCKET (padrão "alertabr"), CHAVE (padrão "estado.json"), INTERVALO (segundos, padrão 300)
 import { execFile } from "node:child_process";
-import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdtempSync, mkdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { monta } from "./monta.mjs";
@@ -29,6 +29,8 @@ async function publica(corpo, chave = CHAVE) {
 }
 
 let memNoticias = null;
+// endereço público do noticias.json (o mesmo que o site lê), tirado de site/config.js
+const NOTICIAS_PUBLICO = (() => { try { const m = /NOTICIAS:\s*"([^"]+)"/.exec(readFileSync(new URL("../site/config.js", import.meta.url), "utf8")); return m ? m[1] : ""; } catch (e) { return ""; } })();
 async function ciclo() {
   let previo = null;
   if (UMA && process.env.PREVIO) { try { previo = await (await fetch(process.env.PREVIO, { signal: AbortSignal.timeout(15000) })).json(); } catch (e) { /* sem arquivo anterior */ } }
@@ -38,8 +40,10 @@ async function ciclo() {
   // notícias e eventos: se falhar, o estado.json (mais importante) já foi publicado e o site usa a busca como reserva
   try {
     let pn = null;
-    if (process.env.PREVIO_NOTICIAS || (UMA && process.env.PREVIO)) { try { pn = await (await fetch(process.env.PREVIO_NOTICIAS || process.env.PREVIO.replace(/estado\.json(\?.*)?$/, "noticias.json"), { signal: AbortSignal.timeout(15000) })).json(); } catch (e) { /* sem arquivo anterior */ } }
-    const n = await coletaNoticias(pn || memNoticias);
+    // memória das notícias: em execução única (GitHub Actions) vem do arquivo público já publicado; no loop local, da rodada anterior
+    const urlPrev = process.env.PREVIO_NOTICIAS || (process.env.PREVIO ? process.env.PREVIO.replace(/estado\.json(\?.*)?$/, "noticias.json") : NOTICIAS_PUBLICO);
+    if (!memNoticias && urlPrev && !OUT) { try { pn = await (await fetch(urlPrev + "?v=" + Date.now(), { signal: AbortSignal.timeout(15000) })).json(); } catch (e) { /* sem arquivo anterior */ } }
+    const n = await coletaNoticias(memNoticias || pn);
     memNoticias = n; await publica(n, "noticias.json");
     const ok = Object.values(n.fontes).filter((x) => x.ok).length;
     console.log(`${hora()} notícias: ${n.itens.length} itens, ${n.eventos.length} eventos | fontes ok ${ok}/${Object.keys(n.fontes).length}`);

@@ -10,7 +10,13 @@ export async function baixa(url, tipo = "json", tentativas = 3, limite = 25000) 
     try {
       const r = await fetch(url, { headers: { "user-agent": UA, accept: "*/*" }, signal: AbortSignal.timeout(limite) });
       if (r.status === 404) { const e = new Error("404 " + url); e.naoExiste = true; throw e; }
-      if (r.ok) return tipo === "json" ? await r.json() : await r.text();
+      if (r.ok) {
+        if (tipo === "json") return await r.json();
+        // texto: respeita a codificação declarada no cabeçalho ou no prólogo do XML (há feeds em ISO-8859-1)
+        const buf = new Uint8Array(await r.arrayBuffer()), ini = new TextDecoder("latin1").decode(buf.subarray(0, 200));
+        const cs = (/charset=([\w-]+)/i.exec(r.headers.get("content-type") || "") || /encoding=["']([\w-]+)["']/i.exec(ini) || [])[1] || "utf-8";
+        try { return new TextDecoder(cs).decode(buf); } catch (e) { return new TextDecoder("utf-8").decode(buf); }
+      }
       ultimo = new Error(r.status + " " + url);
     } catch (e) { if (e.naoExiste) throw e; ultimo = e; }
     await espera(800 * (t + 1) + Math.random() * 400); // 429/5xx: espera e tenta de novo

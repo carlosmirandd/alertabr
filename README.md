@@ -95,6 +95,17 @@ O relay também publica `noticias.json` (no mesmo bucket do `estado.json`):
 - **Outras instituições**: [GDACS](https://www.gdacs.org/) (ONU/UE: terremotos, ciclones, enchentes, secas e incêndios de grande porte que atingem o Brasil) e [USGS](https://earthquake.usgs.gov/) (terremotos no Brasil), mostrados no chip "Outros riscos".
 - O site mostra primeiro os feeds e completa com a busca do Google/Bing. Para desligar a busca, tire o `fetch("/api/noticias")` do `site/app.js` (função `pintaNoticias`) ou apague a pasta `functions/`.
 
+## Previsão do tempo por município
+
+O cartão animado do município mostra o tempo de verdade (temperatura, condição, vento, umidade e 3 dias), vindo do MET Norway pela função `functions/api/tempo.js` (cache de 30 min na borda). O aviso do INMET entra como etiqueta no mesmo cartão. Na visão do Brasil ou de um estado o cartão mostra o aviso mais grave. Se a previsão falhar, o cartão diz isso e oferece "Tentar de novo"; o resto do site segue normal.
+
+## Motor de notícias por cidade
+
+- **Memória de 7 dias:** os feeds só trazem as últimas dezenas de matérias; o relay guarda o que já coletou (7 dias se cita município, 3 se não) relendo o `noticias.json` público a cada rodada.
+- **Lugar:** nome oficial no título manda; apelidos e perífrases ("BH", "capital paulista", "Rio" em feed do RJ, "capital" em feed regional) valem quando não há nome oficial.
+- **Peso (`p`, 0 a 10):** termos de impacto (mortes, desabrigados, emergência, tornado...) e de alerta, e fonte oficial.
+- **Ordem no site:** recência (meia-vida de 36 h) + peso + número de veículos + cidade no título. Notícias de municípios a até 50 km aparecem em "Na região", com cidade e distância.
+
 ## Anúncios (Google AdSense)
 
 Tudo vem desligado. Para ligar, edite `ADS` em `site/config.js` (`cliente`, `slotDesk` 728×90 e `slotMovel` 320×50) e o ID em `site/ads.txt`. Para só ver o espaço, abra o site com `?ads=demo`.

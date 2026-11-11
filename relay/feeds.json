@@ -249,6 +249,73 @@
    "url": "https://g1.globo.com/rss/g1/to/",
    "uf": 17,
    "licenca": ""
+  },
+  {
+   "id": "agenciabrasil-ambiente",
+   "nome": "Agência Brasil",
+   "url": "https://agenciabrasil.ebc.com.br/rss/meio-ambiente/feed.xml",
+   "oficial": true,
+   "licenca": ""
+  },
+  {
+   "id": "agenciaminas",
+   "nome": "Agência Minas",
+   "url": "https://www.agenciaminas.mg.gov.br/rss",
+   "oficial": true,
+   "uf": 31,
+   "licenca": ""
+  },
+  {
+   "id": "metropoles",
+   "nome": "Metrópoles",
+   "url": "https://www.metropoles.com/feed",
+   "licenca": ""
+  },
+  {
+   "id": "correio24h",
+   "nome": "Correio 24 Horas",
+   "url": "https://www.correio24horas.com.br/rss",
+   "uf": 29,
+   "licenca": ""
+  },
+  {
+   "id": "nsctotal",
+   "nome": "NSC Total",
+   "url": "https://www.nsctotal.com.br/feed",
+   "uf": 42,
+   "licenca": ""
+  },
+  {
+   "id": "acritica",
+   "nome": "A Crítica",
+   "url": "https://www.acritica.com/rss",
+   "uf": 13,
+   "licenca": ""
+  },
+  {
+   "id": "gazetadopovo",
+   "nome": "Gazeta do Povo",
+   "url": "https://www.gazetadopovo.com.br/feed/rss/brasil.xml",
+   "licenca": ""
+  },
+  {
+   "id": "jornaldebrasilia",
+   "nome": "Jornal de Brasília",
+   "url": "https://jornaldebrasilia.com.br/feed/",
+   "uf": 53,
+   "licenca": ""
+  },
+  {
+   "id": "climainfo",
+   "nome": "ClimaInfo",
+   "url": "https://climainfo.org.br/feed/",
+   "licenca": ""
+  },
+  {
+   "id": "canalrural",
+   "nome": "Canal Rural",
+   "url": "https://www.canalrural.com.br/feed/",
+   "licenca": ""
   }
  ]
 }

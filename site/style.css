@@ -206,6 +206,7 @@ a { color: inherit; text-underline-offset: 2px; }
 .chips button[aria-pressed="true"] { background: var(--on); color: var(--s0); }
 .not { display: block; padding: var(--e-3) var(--e-1); border-bottom: 1px solid var(--line); text-decoration: none; color: inherit; }
 .not:last-child { border-bottom: 0; } .not:hover b { text-decoration: underline; }
+.not-perto { color: var(--on2); font-weight: 600; }
 .not b { display: block; font-weight: 600; font-size: var(--t-2); line-height: 1.4; } .not small { color: var(--on3); font-size: var(--t-1); }
 
 /* cartão para compartilhar */

@@ -6,7 +6,7 @@ export const sem = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "
 const TEMAS = {
   chuva: /\b(chuv|temporal|temporais|tempestade|alagament|enchente|inundac|deslizament|enxurrada|granizo|vendaval|ventania|trovoada|cheia dos|cheia do|transbord|nivel do rio|risco geologico|desmoronament|bolsao de chuva|ressaca|ciclone|microexplosao|tornado)/,
   fogo: /\b(queimad|foco de calor|focos de calor|fumaca|incendio(s)? (florestal|florestais|em vegetacao|em mata|em area de mata|em area verde|no mato|em canavial|em pastagem|em parque)|incendio(s)? (de|na|no) (vegetacao|mata|floresta|cerrado|pantanal|amazonia)|fogo (na|no|em) (mata|vegetacao|floresta|cerrado|pantanal|area)|prevfogo|brigadista|combate (ao|aos) (fogo|incendio))/,
-  calor: /\b(onda de calor|calor extremo|calor intenso|calorao|seca\b|estiagem|baixa umidade|umidade relativa|umidade do ar|crise hidrica|geada|onda de frio|frio intenso|massa de ar polar|massa de ar seco|temperatura(s)? (recorde|minima|maxima)|friagem|tempo seco|risco de incendio)/,
+  calor: /\b(onda de calor|calor extremo|calor intenso|calorao|(?<!lei )seca\b|estiagem|baixa umidade|umidade relativa|umidade do ar|crise hidrica|geada|onda de frio|frio intenso|massa de ar polar|massa de ar seco|temperatura(s)? (recorde|minima|maxima)|friagem|tempo seco|risco de incendio)/,
   outros: /\b(terremoto|tremor de terra|abalo sismico|sismo|sismologi|tsunami|furacao|ciclone tropical|erupcao|vulcao|rompimento de barragem|barragem (em risco|rompe)|estado de emergencia|situacao de emergencia|calamidade|desastre natural|desastres naturais|eventos extremos|evento extremo|tromba d.agua)/,
 };
 // Termos que, sozinhos, já bastam para a notícia ser considerada (mesmo sem tema fechado).

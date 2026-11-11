@@ -84,10 +84,14 @@
       m.addLayer({ id: "rot-mun", type: "symbol", source: "rot", minzoom: 5.4, layout: { "text-field": ["get", "n"], "text-font": fonte, "text-size": ["interpolate", ["linear"], ["zoom"], 5.4, 10, 10, 13], "symbol-sort-key": ["get", "s"], "text-padding": 4, "text-max-width": 7 }, paint: { "text-color": c.rot, "text-halo-color": c.halo, "text-halo-width": 1.4 } });
       m.addLayer({ id: "rot-uf", type: "symbol", source: "ufr", maxzoom: 6, layout: { "text-field": ["get", "n"], "text-font": fonte, "text-size": 12, "text-allow-overlap": true }, paint: { "text-color": c.rot, "text-halo-color": c.halo, "text-halo-width": 1.6 } });
       this.pronto = true; this.recolore(); this.setSel(this.sel);
+      // tira o "Carregando" assim que os municípios chegam (sem esperar o mapa parar de se mexer)
+      const cedo = (e) => { if (e.sourceId !== "mun" || !e.isSourceLoaded || this.avisouPronto) return; let n = 0; try { n = m.querySourceFeatures("mun", { sourceLayer: "mun" }).length; } catch (x) { /* ainda não */ } if (n) { this.avisouPronto = true; this.carregou = true; m.off("sourcedata", cedo); if (this.op.aoPronto) this.op.aoPronto(); } };
+      m.on("sourcedata", cedo);
       m.once("idle", () => { // tile que não chega (404, offline) não gera erro no MapLibre: confere se algum município foi desenhado
         this.carregou = true;
         const tem = () => m.querySourceFeatures("mun", { sourceLayer: "mun" }).length > 0;
-        if (tem()) { if (this.op.aoPronto) this.op.aoPronto(); return; }
+        if (this.avisouPronto) return;
+        if (tem()) { this.avisouPronto = true; if (this.op.aoPronto) this.op.aoPronto(); return; }
         // ainda vazio: espera os tiles mais um pouco antes de declarar erro (aparelho lento ou aba em segundo plano)
         const ok = () => { if (tem()) { m.off("sourcedata", ok); clearTimeout(t); if (this.op.aoPronto) this.op.aoPronto(); } };
         m.on("sourcedata", ok);
