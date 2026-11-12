@@ -234,7 +234,7 @@
     json(`/api/tempo?lat=${(G.p[2 * i + 1] / 1000).toFixed(2)}&lon=${(G.p[2 * i] / 1000).toFixed(2)}&tz=${fusoDe(i)}`, 15000)
       .then((j) => { if (!j || !j.agora) throw new Error("vazio"); cacheT.set(i, { t: Date.now(), j }); })
       .catch(() => cacheT.set(i, { t: Date.now(), erro: true }))
-      .then(() => { if (sel === i) pintaCeu(); });
+      .then(() => { if (sel === i) { pintaCeu(); if (aba === "cartao") pintaCartao(); } });
   }
   function avisoDoMunicipio(i) { // aviso em destaque: o que a pessoa tocou, ou o mais grave de hoje
     const pos = (D.m[i] || []).slice().sort((x, y) => D.alertas[x].h - D.alertas[y].h || D.alertas[y].sev - D.alertas[x].sev);
@@ -369,8 +369,8 @@
   const ordena = (l, local) => l.map((n) => [pontos(n, local), n]).sort((a, b) => b[0] - a[0]).map((x) => x[1]);
   // distância em km entre os pontos de rótulo de dois municípios
   const distKm = (a, b) => { const R = Math.PI / 180, la1 = G.p[2 * a + 1] / 1000 * R, la2 = G.p[2 * b + 1] / 1000 * R, dl = (G.p[2 * b] - G.p[2 * a]) / 1000 * R; return 6371 * Math.acos(Math.min(1, Math.sin(la1) * Math.sin(la2) + Math.cos(la1) * Math.cos(la2) * Math.cos(dl))); };
-  function listaDoFeed(j) {
-    const t = tema, est = sel < 0 ? selUf : 0;
+  function listaDoFeed(j, t = tema) {
+    const est = sel < 0 ? selUf : 0;
     const ok = (n) => t === "todos" || n.tm.includes(t), ate = Date.now() - 7 * 864e5, ateGeral = Date.now() - 3 * 864e5;
     const itens = (j.itens || []).filter((n) => ok(n) && n.d > ate && (sel >= 0 || !n.pv)); // previsão diária de cidade só aparece na visão da cidade
     const ev = (j.eventos || []).filter((e) => t === "outros" || (t === "todos" ? e.nv >= 2 : e.tm.includes(t) && e.nv >= 2));
@@ -410,21 +410,51 @@
   }
 
   // ---------- cartão da direita: imagem para compartilhar ----------
-  function dadosCartao() {
-    if (sel < 0) { const r = resumoBr(selUf); return { formato, nacional: r, gerado: D.gerado }; }
-    const al = alertasDe(sel).filter((a) => a.h === 0).sort((a, b) => b.sev - a.sev)[0], foc = D.f[sel];
-    if (!al && !foc) return null;
-    return { formato, nome: G.n[sel], uf: ufDe(sel), alerta: al || null, focos: foc, forma: mapa.forma(sel), gerado: D.gerado };
+  // Dados do cartão, já em texto. Sempre há o que mostrar: com aviso, a situação; sem aviso, "tudo certo".
+  const DOMINIO = /^(localhost|127\.|\[::1\])/.test(location.hostname) ? "alertabr.pages.dev" : location.host;
+  const SEV_COR = { 1: "potencial", 2: "perigo", 3: "grande" };
+  const quandoAgora = () => { const d = new Date(); return DIA_SEM[d.getDay()] + ", " + d.toLocaleDateString("pt-BR") + " · " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
+  const manchetes = (lista) => semRepetidos(lista.filter((n) => !n.pv && !n.e)).slice(0, 4).map((n) => ({ t: n.t, meta: (n.f || "") + (n.d ? " · " + ha(n.d) : "") }));
+  async function dadosCartao() {
+    let feed = null; try { feed = await carregaFeed(); } catch (e) { /* sem manchetes */ }
+    const d = { formato, quando: quandoAgora(), dominio: DOMINIO, fontes: "Fontes: INMET (avisos), INPE (focos)" + (sel >= 0 ? ", MET Norway (tempo)" : "") + " · notícias dos veículos citados" };
+    if (sel >= 0) {
+      const at = avisoDoMunicipio(sel), foc = D.f[sel], c = cacheT.get(sel) || {}, uf = codUf(sel);
+      d.lugar = { nome: G.n[sel], sub: NOME_UF[uf] };
+      d.status = at ? { cor: SEV_COR[at.sev], sev: at.sev, txt: NOME_SEV[at.sev] + " · " + at.t + (at.h && diaTxt(at.ini) !== "hoje" ? " · previsto para " + diaTxt(at.ini) : " · hoje") }
+        : { cor: "ok", txt: "Nenhum aviso do INMET para hoje. Tudo certo por aqui." };
+      if (at) d.aviso = { sev: at.sev, t: at.t, quando: (at.h && diaTxt(at.ini) !== "hoje" ? diaTxt(at.ini) + " · " : "") + janela(at.ini) + " → " + janela(at.fim), desc: (at.r || []).join(" "), fazer: (at.i || []).filter(Boolean).slice(0, 2) };
+      if (c.j) {
+        const a = c.j.agora, hojeIso = new Date(Date.now() + fusoDe(sel) * 36e5).toISOString().slice(0, 10), hoje = c.j.dias.find((x) => x.d === hojeIso);
+        d.tempo = { temp: a.temp, txt: a.txt, cena: a.noite && (a.tipo === "sol" || a.tipo === "nuvem") ? "noite" : a.tipo,
+          detalhe: (hoje ? "Máx " + hoje.max + "° · Mín " + hoje.min + "° · " : "") + "Vento " + a.vento + " km/h · Umidade " + a.umid + "%",
+          dias: c.j.dias.filter((x) => x.d > hojeIso).slice(0, 3).map((x) => ({ dia: DIA_SEM[new Date(x.d + "T12:00:00Z").getUTCDay()], cena: x.tipo, max: x.max, min: x.min })) };
+      } else buscaTempo(sel); // chega depois e o cartão se refaz
+      d.focos = { n: foc, txt: foc ? fmt(foc) + (foc === 1 ? " foco de calor" : " focos de calor") + " nas últimas 24 h" : "Nenhum foco de calor nas últimas 24 h" };
+      if (feed) { const f = listaDoFeed(feed, "todos"), est = ordena((feed.itens || []).filter((n) => !n.pv && n.s.includes(uf) && !n.m.includes(sel) && Date.now() - n.d < 3 * 864e5)); d.manchetes = manchetes([...f.principal, ...f.perto, ...est]); }
+    } else {
+      const cod = selUf, r = resumoBr(cod), soma = r.sev[1] + r.sev[2] + r.sev[3];
+      d.lugar = { nome: cod ? NOME_UF[cod] : "Brasil", sub: cod ? "Panorama do estado" : "Panorama nacional" };
+      const hoje = D.alertas.map((a, p) => { if (!cod) return a; let n = 0; for (const i of membros[p] || []) if (codUf(i) === cod) n++; return n ? { ...a, n } : null; }).filter((a) => a && a.h === 0);
+      const pior = hoje.reduce((m, a) => Math.max(m, a.sev), 0);
+      d.status = soma ? { cor: SEV_COR[pior], sev: pior, txt: fmt(soma) + " de " + fmt(r.tot) + " municípios com aviso do INMET hoje (" + (soma / r.tot * 100).toFixed(1).replace(".", ",") + "%)" }
+        : { cor: "ok", txt: "Nenhum aviso do INMET hoje" + (cod ? " no estado" : " no país") + ". Tudo certo por enquanto." };
+      d.resumo = soma ? { c: { 1: fmt(r.sev[1]), 2: fmt(r.sev[2]), 3: fmt(r.sev[3]) }, top: hoje.sort((a, b) => b.sev - a.sev || b.n - a.n).map((a) => ({ t: a.t, sev: a.sev, onde: cod ? "até " + janela(a.fim) : siglas(a.uf, 2), n: fmt(a.n) })) } : null;
+      d.focos = { n: r.focos, txt: r.focos ? fmt(r.focos) + " focos de calor em 24 h" : "Nenhum foco de calor em 24 h", extra: r.top[0] ? "Mais focos: " + r.top[0].nome + " · " + r.top[0].uf + " (" + fmt(r.top[0].n) + ")" : "" };
+      if (feed) d.manchetes = manchetes(listaDoFeed(feed, "todos").principal);
+    }
+    return d;
   }
-  function pintaCartao() {
+  let vezCartao = 0;
+  async function pintaCartao() {
     if (!D) return; if (aba !== "cartao") { sujo.c = true; return; } sujo.c = false;
-    const el = $("#aba-cartao"), d = dadosCartao();
+    const el = $("#aba-cartao"), vez = ++vezCartao;
     el.innerHTML = `<h2 class="sec">Cartão para compartilhar · ${sel >= 0 ? esc(G.n[sel]) : selUf ? esc(NOME_UF[selUf]) : "Brasil"}</h2>
       <div class="chips"><button data-fmt="post" aria-pressed="${formato === "post"}">Post 1:1</button><button data-fmt="stories" aria-pressed="${formato === "stories"}">Stories 9:16</button></div>
-      ${d ? '<div class="cartao-l"><div id="prev"></div><div class="acoes"><button class="btn" data-baixa="1">Baixar PNG</button><button class="btn sec" data-comp="1">Compartilhar</button></div></div>' : '<p class="vazio">Sem aviso nem foco de calor neste município agora, então não há o que divulgar.</p>'}`;
-    if (!d) { cartaoCv = null; return; }
-    if (sel >= 0 && !d.forma && mapa.carregaFormas && !mapa.paths) mapa.carregaFormas().then(() => { if (sel >= 0) pintaCartao(); }).catch(() => {});
-    cartaoCv = window.Cartao.gera(d); const img = new Image(); img.className = "previa"; img.alt = "Prévia do cartão"; img.src = cartaoCv.toDataURL("image/jpeg", 0.85); $("#prev").appendChild(img);
+      <div class="cartao-l"><div id="prev"><div class="esq-linha" style="height:260px;max-width:360px"></div></div><div class="acoes"><button class="btn" data-baixa="1">Baixar PNG</button><button class="btn sec" data-comp="1">Compartilhar</button></div></div>`;
+    const d = await dadosCartao(); if (vez !== vezCartao || aba !== "cartao") return;
+    cartaoCv = window.Cartao.gera(d); const img = new Image(); img.className = "previa"; img.alt = "Prévia do cartão: " + d.lugar.nome + ". " + d.status.txt; img.src = cartaoCv.toDataURL("image/jpeg", 0.88);
+    const pv = $("#prev"); pv.innerHTML = ""; pv.appendChild(img);
   }
   const nomeArq = () => "alertabr-" + (sel >= 0 ? norm(G.n[sel]).replace(/[^a-z0-9]+/g, "-") : selUf ? norm(NOME_UF[selUf]).replace(/[^a-z0-9]+/g, "-") : "brasil") + "-" + formato + ".png";
 
