@@ -12,7 +12,9 @@ const TEMAS = {
 // Termos que, sozinhos, já bastam para a notícia ser considerada (mesmo sem tema fechado).
 const GERAL = /\b(defesa civil|inmet|cemaden|inpe|alerta de (chuva|tempestade|ventania|vendaval|granizo|calor|frio|baixa umidade|onda|ressaca|risco|inundacao|deslizamento|incendio|seca|geada|perigo)|aviso de (chuva|tempestade|ventania|vendaval|granizo|calor|frio|baixa umidade|ressaca|perigo)|aviso meteorologico|alerta meteorologico|alerta laranja|alerta vermelho|alerta amarelo|alerta de perigo|grande perigo)/;
 // O que tira a notícia da lista quando o assunto é outro (esporte, famosos, figuras de linguagem...), a não ser que ela tenha um termo FORTE.
-const RUIM = /\b(futebol|brasileirao|libertadores|campeonato|rodada|torcida|rebaixa|gol de|gols de|bbb|big brother|novela|horoscopo|famoso|celebridade|show|festival|carnaval|filme|serie|cantor|cantora|ator |atriz|bolsa de valores|ibovespa|dolar|mega-sena|loteria|aposta|eleicao|eleicoes|candidato|chuva de (premios|criticas|gols|ofertas|prata|estrelas|meteoros|confete|elogios|dinheiro|votos)|gp|interlagos|formula 1|f1|pole|grid|toni tornado|bailes|pegar fogo|pega fogo|fogo cruzado|fogo amigo|esquenta)\b/;
+const RUIM = /\b(futebol|brasileirao|libertadores|campeonato|rodada|torcida|rebaixa|gol de|gols de|bbb|big brother|novela|horoscopo|famoso|celebridade|show|festival|carnaval|filme|serie|cantor|cantora|ator |atriz|bolsa de valores|ibovespa|dolar|mega-sena|loteria|aposta|eleicao|eleicoes|candidato|chuva de (premios|criticas|gols|ofertas|prata|estrelas|meteoros|confete|elogios|dinheiro|votos)|gp|interlagos|black friday|promocao|promocoes|oferta|ofertas|desconto|caravana|liquidacao|formula 1|f1|pole|grid|toni tornado|bailes|pegar fogo|pega fogo|fogo cruzado|fogo amigo|esquenta)\b/;
+// Fora do escopo SEMPRE (vale mesmo com termo forte): guerra e conflitos no exterior. "Defesa Civil de Gaza" não é a nossa.
+const FORA = /\b(gaza|israel|israelense|palestin|hamas|hezbollah|cisjordania|libano|siria|ucrania|ucraniano|russia|russo|kiev|moscou|iemen|iraque|bombardeio|bombardeia|missil|misseis|drone|ataque aereo|ataque israelense|ataque russo|guerra)\b/;
 const FORTE = /\b(defesa civil|alagament|enchente|deslizament|queimad|foco de calor|focos de calor|inmet|cemaden|estado de emergencia|situacao de emergencia|calamidade|onda de calor|estiagem|inundac|alerta de|aviso de|desabament)/;
 
 // Retorna os temas encontrados ("chuva","fogo","calor","outros"); "geral" quando só há termos amplos (conta apenas em "Tudo").
@@ -27,6 +29,7 @@ export function temasDe(titulo, resumo = "") {
 export function relevante(titulo, resumo = "") {
   const t = sem(titulo), tm = temasDe(titulo, resumo);
   if (!tm.length) return false;
+  if (FORA.test(t)) return false;
   if (RUIM.test(t) && !FORTE.test(t)) return false;
   return true;
 }

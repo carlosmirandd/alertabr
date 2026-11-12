@@ -68,4 +68,5 @@ assert.ok(!relevante("Motociclista é preso em blitz da Lei Seca"), "Lei Seca n�
 assert.deepEqual(nome(localiza("Temporal alaga ruas de BH", "")), ["Belo Horizonte"]); assert.deepEqual(nome(localiza("Chuva forte atinge o Rio e fecha túnel", "", 33)), ["Rio de Janeiro"]);
 assert.deepEqual(nome(localiza("Nível do rio sobe e preocupa moradores", "", 33)), [], "rio (curso d'água) não é a cidade"); assert.deepEqual(nome(localiza("Temporal alaga ruas da capital", "", 43)), ["Porto Alegre"]);
 assert.ok(pesoDe("Temporal deixa dois mortos e 300 desabrigados") > pesoDe("Veja a previsão para o fim de semana"));
+assert.ok(!relevante("Ataque israelense a hospital em Gaza deixa seis mortos, diz Defesa Civil"), "conflito no exterior fica fora mesmo citando Defesa Civil");
 console.log("ok: todos os testes passaram");

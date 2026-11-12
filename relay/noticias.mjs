@@ -163,7 +163,7 @@ export async function coletaNoticias(previo = null) {
   // (7 dias se cita município, 3 dias se não). É isso que dá notícia para cidade pequena. Também cobre um feed que caiu por alguns minutos.
   const agora = Date.now(), vale = (it) => agora - it.d < (it.m && it.m.length ? DIAS : DIAS_SEM_LUGAR) * 864e5 && (!it.pv || agora - it.d < 30 * 36e5);
   const ativos = new Set(feeds.map((f) => f.nome));
-  if (previo && Array.isArray(previo.itens)) for (const it of previo.itens) if (ativos.has(it.f) && vale(it) && !it.t.includes("\uFFFD")) todas.push({ p: 3, ...it }); // fonte desativada sai junto com as suas matérias
+  if (previo && Array.isArray(previo.itens)) for (const it of previo.itens) if (ativos.has(it.f) && vale(it) && !it.t.includes("\uFFFD") && (it.pv || relevante(it.t))) todas.push({ p: 3, ...it }); // o filtro de hoje vale também para o que foi guardado // fonte desativada sai junto com as suas matérias
   // junta a mesma URL e títulos muito parecidos (guarda o oficial/mais recente e conta as fontes)
   const porUrl = new Map(); for (const it of todas) if (vale(it) && !porUrl.has(it.u)) porUrl.set(it.u, it); // a versão nova (desta rodada) vem antes da guardada
   const grupos = [];

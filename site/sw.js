@@ -3,7 +3,7 @@
    - geometria, fontes e vendor: cache primeiro, atualiza em segundo plano (stale-while-revalidate)
    - estado.json (dados ao vivo, no R2 ou local): rede primeiro; sem rede, usa a última cópia
    - /api/*: sempre rede (notícias). Para forçar atualização geral, troque o número em VERSAO. */
-const VERSAO = "alertabr-v6";
+const VERSAO = "alertabr-v7";
 const BASICOS = ["./", "index.html", "style.css", "app.js", "mapa.js", "mapa-gl.js", "cartao.js", "config.js", "ads.js", "sobre.html", "privacidade.html", "pagina.css", "data/noticias.json", "vendor/maplibre-gl.js", "vendor/maplibre-gl.css",
   "data/mun.json", "data/estado.json", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/favicon.svg",
   "fonts/Open Sans Semibold/0-255.pbf", "fonts/Open Sans Semibold/256-511.pbf"];
