@@ -432,7 +432,7 @@
           dias: c.j.dias.filter((x) => x.d > hojeIso).slice(0, 3).map((x) => ({ dia: DIA_SEM[new Date(x.d + "T12:00:00Z").getUTCDay()], cena: x.tipo, max: x.max, min: x.min })) };
       } else buscaTempo(sel); // chega depois e o cartão se refaz
       d.focos = { n: foc, txt: foc ? fmt(foc) + (foc === 1 ? " foco de calor" : " focos de calor") + " nas últimas 24 h" : "Nenhum foco de calor nas últimas 24 h" };
-      if (feed) { const f = listaDoFeed(feed, "todos"), est = ordena((feed.itens || []).filter((n) => !n.pv && n.s.includes(uf) && !n.m.includes(sel) && Date.now() - n.d < 3 * 864e5)); d.manchetes = manchetes([...f.principal, ...f.perto, ...est], (n) => n.perto || (n.m.includes(sel) ? G.n[sel] : n.m.length ? G.n[n.m[0]] + (codUf(n.m[0]) === uf ? "" : " · " + ufDe(n.m[0])) : NOME_UF[uf])); }
+      if (feed) { const f = listaDoFeed(feed, "todos"), est = ordena((feed.itens || []).filter((n) => !n.pv && n.s.includes(uf) && !n.m.includes(sel) && Date.now() - n.d < 3 * 864e5)); d.manchetes = manchetes([...f.principal, ...f.perto, ...est], (n) => n.perto || (n.m.includes(sel) ? G.n[sel] : n.m.length ? G.n[n.m[0]] + (codUf(n.m[0]) === uf ? "" : " · " + ufDe(n.m[0])) : "Do estado · " + UFS[uf])); } // sem cidade citada: diz que é do estado, sem confundir com a capital
     } else {
       const cod = selUf, r = resumoBr(cod), soma = r.sev[1] + r.sev[2] + r.sev[3];
       d.lugar = { nome: cod ? NOME_UF[cod] : "Brasil", sub: cod ? "Panorama do estado" : "Panorama nacional" };
