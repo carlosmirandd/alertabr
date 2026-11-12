@@ -414,7 +414,8 @@
   const DOMINIO = /^(localhost|127\.|\[::1\])/.test(location.hostname) ? "alertabr.pages.dev" : location.host;
   const SEV_COR = { 1: "potencial", 2: "perigo", 3: "grande" };
   const quandoAgora = () => { const d = new Date(); return DIA_SEM[d.getDay()] + ", " + d.toLocaleDateString("pt-BR") + " · " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
-  const manchetes = (lista) => semRepetidos(lista.filter((n) => !n.pv && !n.e)).slice(0, 4).map((n) => ({ t: n.t, meta: (n.f || "") + (n.d ? " · " + ha(n.d) : "") }));
+  // origem dita em cada manchete: a cidade escolhida, "Cidade · N km" (vizinha) ou a cidade/estado a que a notícia se refere
+  const manchetes = (lista, origem) => semRepetidos(lista.filter((n) => !n.pv && !n.e)).slice(0, 4).map((n) => ({ t: n.t, meta: [origem ? origem(n) : "", n.f || "", n.d ? ha(n.d) : ""].filter(Boolean).join(" · ") }));
   async function dadosCartao() {
     let feed = null; try { feed = await carregaFeed(); } catch (e) { /* sem manchetes */ }
     const d = { formato, quando: quandoAgora(), dominio: DOMINIO, fontes: "Fontes: INMET (avisos), INPE (focos)" + (sel >= 0 ? ", MET Norway (tempo)" : "") + " · notícias dos veículos citados" };
@@ -431,7 +432,7 @@
           dias: c.j.dias.filter((x) => x.d > hojeIso).slice(0, 3).map((x) => ({ dia: DIA_SEM[new Date(x.d + "T12:00:00Z").getUTCDay()], cena: x.tipo, max: x.max, min: x.min })) };
       } else buscaTempo(sel); // chega depois e o cartão se refaz
       d.focos = { n: foc, txt: foc ? fmt(foc) + (foc === 1 ? " foco de calor" : " focos de calor") + " nas últimas 24 h" : "Nenhum foco de calor nas últimas 24 h" };
-      if (feed) { const f = listaDoFeed(feed, "todos"), est = ordena((feed.itens || []).filter((n) => !n.pv && n.s.includes(uf) && !n.m.includes(sel) && Date.now() - n.d < 3 * 864e5)); d.manchetes = manchetes([...f.principal, ...f.perto, ...est]); }
+      if (feed) { const f = listaDoFeed(feed, "todos"), est = ordena((feed.itens || []).filter((n) => !n.pv && n.s.includes(uf) && !n.m.includes(sel) && Date.now() - n.d < 3 * 864e5)); d.manchetes = manchetes([...f.principal, ...f.perto, ...est], (n) => n.perto || (n.m.includes(sel) ? G.n[sel] : n.m.length ? G.n[n.m[0]] + (codUf(n.m[0]) === uf ? "" : " · " + ufDe(n.m[0])) : NOME_UF[uf])); }
     } else {
       const cod = selUf, r = resumoBr(cod), soma = r.sev[1] + r.sev[2] + r.sev[3];
       d.lugar = { nome: cod ? NOME_UF[cod] : "Brasil", sub: cod ? "Panorama do estado" : "Panorama nacional" };
@@ -441,7 +442,7 @@
         : { cor: "ok", txt: "Nenhum aviso do INMET hoje" + (cod ? " no estado" : " no país") + ". Tudo certo por enquanto." };
       d.resumo = soma ? { c: { 1: fmt(r.sev[1]), 2: fmt(r.sev[2]), 3: fmt(r.sev[3]) }, top: hoje.sort((a, b) => b.sev - a.sev || b.n - a.n).map((a) => ({ t: a.t, sev: a.sev, onde: cod ? "até " + janela(a.fim) : siglas(a.uf, 2), n: fmt(a.n) })) } : null;
       d.focos = { n: r.focos, txt: r.focos ? fmt(r.focos) + " focos de calor em 24 h" : "Nenhum foco de calor em 24 h", extra: r.top[0] ? "Mais focos: " + r.top[0].nome + " · " + r.top[0].uf + " (" + fmt(r.top[0].n) + ")" : "" };
-      if (feed) d.manchetes = manchetes(listaDoFeed(feed, "todos").principal);
+      if (feed) d.manchetes = manchetes(listaDoFeed(feed, "todos").principal, (n) => n.m.length ? G.n[n.m[0]] + " · " + ufDe(n.m[0]) : n.s.length === 1 ? NOME_UF[n.s[0]] : "");
     }
     return d;
   }
