@@ -7,7 +7,9 @@
   "use strict";
   var C = window.ALERTABR || {}, A = C.ADS || {}, demo = /[?&]ads=demo\b/.test(location.search);
   var movel = window.matchMedia("(max-width:727px)").matches, slot = movel ? A.slotMovel : A.slotDesk;
+  var host = location.hostname, local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(host);
   if (!demo && !(A.cliente && slot)) return;
+  if (!local && A.dominios && A.dominios.length && A.dominios.indexOf(host) < 0) return; // cópia do site em outro endereço: sem anúncio (não gasta o seu ID)
   var CH = "alertabr-consent", de = document.documentElement, h = movel ? 50 : 90;
   var guarda = function (v) { try { v === null ? localStorage.removeItem(CH) : localStorage.setItem(CH, v); } catch (e) { /* sem armazenamento: pergunta de novo na próxima visita */ } };
   var lê = function () { try { return localStorage.getItem(CH); } catch (e) { return null; } };
