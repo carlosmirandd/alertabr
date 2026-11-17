@@ -81,7 +81,7 @@ export function localiza(titulo, resumo, ufFeed = 0) {
   const t = achaLugares(titulo, ufFeed);
   if (t.m.length || t.s.length) return { ...t, tit: t.m.length ? 1 : 0 }; // o título manda
   const r = achaLugares(resumo, ufFeed);
-  if (r.m.length > 3) return { m: [], s: ufFeed ? [ufFeed] : [] }; // resumo que lista várias cidades (previsão, balanço) não diz de onde é a notícia
+  if (r.m.length > 1 || r.s.length > 1) return { m: [], s: ufFeed ? [ufFeed] : [] }; // resumo que cita vários lugares (previsão nacional, balanço, "Centro-Sul") não diz de onde é a notícia
   return r.m.length || r.s.length ? r : { m: [], s: ufFeed ? [ufFeed] : [] }; // sem lugar no texto: vale o estado do feed regional
 }
 

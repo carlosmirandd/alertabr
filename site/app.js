@@ -379,7 +379,7 @@
     const loc = ordena(itens.filter((n) => n.m.includes(sel)), true);
     // na região: notícias que citam municípios a até 50 km (tempo severo é regional). Vêm separadas e com a cidade e a distância ditas.
     const perto = [];
-    for (const n of itens) { if (n.pv || n.m.includes(sel) || n.d < ateGeral) continue; let melhor = null; for (const k of n.m) { const d = distKm(sel, k); if (d <= 50 && (!melhor || d < melhor.km)) melhor = { km: d, k }; } if (melhor) perto.push({ ...n, perto: G.n[melhor.k] + " · " + Math.max(1, Math.round(melhor.km)) + " km", km: melhor.km }); }
+    for (const n of itens) { if (n.pv || !n.mt || n.m.includes(sel) || n.d < ateGeral) continue; /* só notícia com a cidade vizinha no TÍTULO conta como "da região" */ let melhor = null; for (const k of n.m) { const d = distKm(sel, k); if (d <= 50 && (!melhor || d < melhor.km)) melhor = { km: d, k }; } if (melhor) perto.push({ ...n, perto: G.n[melhor.k] + " · " + Math.max(1, Math.round(melhor.km)) + " km", km: melhor.km }); }
     return { principal: loc, perto: semRepetidos(ordena(perto)).slice(0, 5) };
   }
   function pintaNoticias() {
@@ -415,7 +415,7 @@
   const SEV_COR = { 1: "potencial", 2: "perigo", 3: "grande" };
   const quandoAgora = () => { const d = new Date(); return DIA_SEM[d.getDay()] + ", " + d.toLocaleDateString("pt-BR") + " · " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
   // origem dita em cada manchete: a cidade escolhida, "Cidade · N km" (vizinha) ou a cidade/estado a que a notícia se refere
-  const manchetes = (lista, origem) => semRepetidos(lista.filter((n) => !n.pv && !n.e)).slice(0, 4).map((n) => ({ t: n.t, meta: [origem ? origem(n) : "", n.f || "", n.d ? ha(n.d) : ""].filter(Boolean).join(" · ") }));
+  const manchetes = (lista, origem, regional) => semRepetidos(lista.filter((n) => !n.pv && !n.e)).slice(0, 4).map((n) => ({ reg: regional ? regional(n) : false, t: n.t, meta: [origem ? origem(n) : "", n.f || "", n.d ? ha(n.d) : ""].filter(Boolean).join(" · ") }));
   async function dadosCartao() {
     let feed = null; try { feed = await carregaFeed(); } catch (e) { /* sem manchetes */ }
     const d = { formato, quando: quandoAgora(), dominio: DOMINIO, fontes: "Fontes: INMET (avisos), INPE (focos)" + (sel >= 0 ? ", MET Norway (tempo)" : "") + " · notícias dos veículos citados" };
@@ -432,7 +432,13 @@
           dias: c.j.dias.filter((x) => x.d > hojeIso).slice(0, 3).map((x) => ({ dia: DIA_SEM[new Date(x.d + "T12:00:00Z").getUTCDay()], cena: x.tipo, max: x.max, min: x.min })) };
       } else buscaTempo(sel); // chega depois e o cartão se refaz
       d.focos = { n: foc, txt: foc ? fmt(foc) + (foc === 1 ? " foco de calor" : " focos de calor") + " nas últimas 24 h" : "Nenhum foco de calor nas últimas 24 h" };
-      if (feed) { const f = listaDoFeed(feed, "todos"), est = ordena((feed.itens || []).filter((n) => !n.pv && n.s.includes(uf) && !n.m.includes(sel) && Date.now() - n.d < 3 * 864e5)); d.manchetes = manchetes([...f.principal, ...f.perto, ...est], (n) => n.perto || (n.m.includes(sel) ? G.n[sel] : n.m.length ? G.n[n.m[0]] + (codUf(n.m[0]) === uf ? "" : " · " + ufDe(n.m[0])) : "Do estado · " + UFS[uf])); } // sem cidade citada: diz que é do estado, sem confundir com a capital
+      if (feed) {
+        // ordem: a cidade, depois o raio de 50 km (só notícias com a cidade vizinha no título) e, se faltar, o estado (dito como "Do estado")
+        const f = listaDoFeed(feed, "todos"), est = ordena((feed.itens || []).filter((n) => !n.pv && n.s.includes(uf) && !n.m.includes(sel) && !f.perto.some((p) => p.u === n.u) && Date.now() - n.d < 3 * 864e5));
+        const origemN = (n) => n.perto || (n.m.includes(sel) ? G.n[sel] : n.m.length ? G.n[n.m[0]] + (codUf(n.m[0]) === uf ? "" : " · " + ufDe(n.m[0])) : "Do estado · " + UFS[uf]);
+        d.manchetes = manchetes([...f.principal, ...f.perto, ...est], origemN, (n) => !!n.perto || n.m.includes(sel));
+        d.tituloRegiao = "MANCHETES · RAIO DE 50 KM DE " + G.n[sel].toUpperCase(); d.tituloMisto = "MANCHETES · CIDADE, REGIÃO E ESTADO"; // o desenho escolhe pelo que de fato coube
+      }
     } else {
       const cod = selUf, r = resumoBr(cod), soma = r.sev[1] + r.sev[2] + r.sev[3];
       d.lugar = { nome: cod ? NOME_UF[cod] : "Brasil", sub: cod ? "Panorama do estado" : "Panorama nacional" };

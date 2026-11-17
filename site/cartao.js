@@ -110,10 +110,10 @@
   }
   function blocoManchetes(cx, d, x, y, w, desenha, S, disp) { // entram quantas manchetes couberem no espaço (no máximo 4 / 2)
     cx.font = fnt(700, 30); const it = []; let h = 52;
-    for (const m of d.manchetes.slice(0, S ? 4 : 3)) { const l = linhas(cx, m.t, w, 2), hh = l.length * 38 + 50; if (disp != null && h + hh > disp) break; it.push({ l, meta: m.meta }); h += hh; }
+    for (const m of d.manchetes.slice(0, S ? 4 : 3)) { const l = linhas(cx, m.t, w, 2), hh = l.length * 38 + 50; if (disp != null && h + hh > disp) break; it.push({ l, meta: m.meta, reg: m.reg }); h += hh; }
     if (!it.length) return 1e6; // nem uma coube
     if (!desenha) return h;
-    escreve(cx, "MANCHETES", x, y + 30, 700, 22, C.tx3);
+    escreve(cx, d.tituloRegiao && it.every((m) => m.reg) ? d.tituloRegiao : d.tituloMisto || "MANCHETES", x, y + 30, 700, 22, C.tx3); // diz de que raio vêm as notícias
     let yy = y + 78;
     it.forEach((m, i) => { m.l.forEach((l, k) => escreve(cx, l, x, yy + k * 38, 700, 30, C.tx)); yy += m.l.length * 38; escreve(cx, m.meta, x, yy + 2, 500, 22, C.tx3); yy += 50;
       if (i < it.length - 1) { cx.fillStyle = C.borda; cx.fillRect(x, yy - 26, w, 2); } });
