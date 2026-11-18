@@ -51,7 +51,7 @@
     ciclo();
   }
   function criaMapa() {
-    const op = { cor: corDe, padrao: padraoDe, aoClicar: aoClicar, aoPassar: aoPassar, insets: insets, capitais: CAPITAIS, aoPronto: () => { $("#carrega").classList.add("ok"); const ok = () => mapa.carregaFormas().then(() => { if (sel >= 0) pintaCartao(); }).catch(() => {}); if (window.requestIdleCallback) requestIdleCallback(ok, { timeout: 4000 }); else setTimeout(ok, 1500); }, aoErro: () => erroMapa("Não foi possível carregar o mapa. Verifique a conexão.") };
+    const op = { cor: corDe, padrao: padraoDe, aoClicar: aoClicar, aoPassar: aoPassar, insets: insets, capitais: CAPITAIS, aoPronto: () => { $("#carrega").classList.add("ok"); marcaMapa(); const ok = () => mapa.carregaFormas().then(() => { if (sel >= 0) pintaCartao(); }).catch(() => {}); if (window.requestIdleCallback) requestIdleCallback(ok, { timeout: 4000 }); else setTimeout(ok, 1500); }, aoErro: () => erroMapa("Não foi possível carregar o mapa. Verifique a conexão.") };
     if (window.MapaGL && window.MapaGL.suportado()) {
       // se o WebGL falhar antes de o mapa aparecer (contexto gráfico indisponível, tiles fora do ar), tenta o mapa em canvas
       op.aoErro = () => { if (mapa && mapa.pronto) return; try { mapa.map.remove(); } catch (e) { /* já removido */ } $("#mapa").querySelectorAll(".maplibregl-canvas-container, .maplibregl-control-container").forEach((x) => x.remove()); criaCanvas(op); };
@@ -65,11 +65,11 @@
     Promise.all([json("data/municipios.json", 30000), json("data/estados.json", 30000)]).then(([g, e]) => {
       mapa = new window.MapaBrasil($("#mapa"), g, e, op); mapa.prio = new Set([...CAPITAIS].map((c) => G.c.indexOf(c)).filter((k) => k >= 0));
       mapa.forma = (i) => ({ path: mapa.paths[i], caixa: mapa.box[i] }); mapa.carregaFormas = () => Promise.resolve();
-      $("#carrega").classList.remove("erro"); $("#carrega").classList.add("ok"); if (D) mapa.setCor(corDe, true); if (sel >= 0) mapa.setSel(sel); if (mapa.refit) mapa.refit();
+      $("#carrega").classList.remove("erro"); $("#carrega").classList.add("ok"); marcaMapa(); if (D) mapa.setCor(corDe, true); if (sel >= 0) mapa.setSel(sel); if (mapa.refit) mapa.refit();
     }).catch(() => erroMapa("Não foi possível carregar o mapa. Verifique a conexão."));
   }
   function erroMapa(msg) {
-    const c = $("#carrega"); c.classList.remove("ok"); c.classList.add("erro");
+    const c = $("#carrega"); c.classList.remove("ok"); c.classList.add("erro"); emiteErro();
     $("#carregaTxt").innerHTML = `${esc(msg)}<button type="button" class="btn" id="tentaMapa">Tentar de novo</button>`;
     $("#tentaMapa").addEventListener("click", () => location.reload());
   }
@@ -85,14 +85,21 @@
     return null;
   }
   let erroDados = false;
+  // O anúncio só pode aparecer em tela COM conteúdo (regra do AdSense: nada de anúncio em tela de carregamento ou de erro).
+  // "alertabr-pronto" = alertas e mapa já estão na tela; "alertabr-erro" = voltou a ficar sem conteúdo.
+  let prontoDados = false, prontoMapa = false, prontoEmitido = false;
+  function checaPronto() { if (prontoDados && prontoMapa && !prontoEmitido) { prontoEmitido = true; document.dispatchEvent(new Event("alertabr-pronto")); } }
+  const marcaMapa = () => { prontoMapa = true; checaPronto(); };
+  const emiteErro = () => { prontoEmitido = false; document.dispatchEvent(new Event("alertabr-erro")); };
   function aplica(j) {
     if (D && j.gerado <= D.gerado) { status(); return; } // um arquivo mais velho que o que já temos não substitui os dados
     const antes = D ? D.s.reduce((a, x) => a + (x ? 1 : 0), 0) : -1;
     D = j; semDados = false; erroDados = false; montaMembros();
     if (antes >= 0) { const agora = D.s.reduce((a, x) => a + (x ? 1 : 0), 0); anuncia("Alertas atualizados." + (agora !== antes ? ` Agora são ${fmt(agora)} municípios com aviso.` : "")); } mapa.setCor(corDe, true); mapa.setDestaque(destaquePos >= 0 ? membros[destaquePos] : null);
     legenda(); pintaHero(); pintaAgora(); pintaCartao(); if (sujo.n) pintaNoticias(); status();
+    prontoDados = true; checaPronto();
   }
-  function falhaDados() { if (!D) { erroDados = true; pintaAgora(); pintaHero(); anuncia("Não foi possível buscar os alertas."); } status("erro"); }
+  function falhaDados() { if (!D) { erroDados = true; pintaAgora(); pintaHero(); anuncia("Não foi possível buscar os alertas."); emiteErro(); } status("erro"); }
   function anuncia(txt) { const el = $("#anuncio"); el.textContent = ""; setTimeout(() => { el.textContent = txt; }, 50); }
   async function atualiza() { const j = await buscaEstado(); if (j) aplica(j); else falhaDados(); }
   function ciclo() {

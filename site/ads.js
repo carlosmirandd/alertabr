@@ -1,5 +1,5 @@
 /* Anúncios (Google AdSense) do alertabr.
-   - Só roda se config.js tiver ADS.cliente + o slot do tamanho certo, ou com ?ads=demo (mostra o espaço sem carregar nada do Google).
+   - Só roda se config.js tiver ADS.cliente + o slot do tamanho certo, ou com ?ads=demo (mostra o espaço, sem pedir anúncio ao Google).
    - O script do Google carrega na abertura da página (<head>). Padrão = anúncios personalizados; quem escolher "Sem personalização" recebe anúncios contextuais.
    - A faixa é FIXA no rodapé (728x90 no computador, 320x50 no celular), separada do mapa e dos botões: não cobre nada e evita clique por engano.
    - O espaço é reservado pelo CSS (--safe-b inclui --ad-h), então os cartões e a folha do celular ficam sempre acima da faixa. */
@@ -24,7 +24,7 @@
 
   // O script do AdSense já vem no <head> do index.html (carrega na abertura da página). Aqui só desenhamos a faixa e escolhemos o tipo de anúncio.
   function carrega(personalizado) {
-    if (demo && (!A.cliente || !slot)) { barra.innerHTML = '<div class="ad-demo"><small>Publicidade</small><b>Espaço do anúncio ' + (movel ? "320×50" : "728×90") + ' (modo demonstração)</b></div>'; mostra(); return; }
+    /* demonstração: só o espaço, sem pedir nada ao Google */ if (demo) { barra.innerHTML = '<div class="ad-demo"><small>Publicidade</small><b>Espaço do anúncio ' + (movel ? "320×50" : "728×90") + ' (modo demonstração)</b></div>'; mostra(); return; }
     window.adsbygoogle = window.adsbygoogle || [];
     if (!personalizado) window.adsbygoogle.requestNonPersonalizedAds = 1;
     barra.innerHTML = '<ins class="adsbygoogle" style="display:inline-block;width:' + (movel ? 320 : 728) + "px;height:" + h + 'px" data-ad-client="' + A.cliente + '" data-ad-slot="' + slot + '"></ins><small class="ad-rot">Publicidade</small>';
@@ -42,5 +42,9 @@
     document.addEventListener("DOMContentLoaded", function () { document.body.appendChild(b); });
     if (document.body) document.body.appendChild(b);
   }
-  carrega(lê() !== "n");
+  // Só pede o anúncio quando a página já tem conteúdo (alertas + mapa). Em carregamento ou erro a faixa fica escondida.
+  var pediu = false;
+  function esconde() { barra.classList.add("espera"); de.classList.remove("com-ads"); de.style.removeProperty("--ad-h"); mostrou = false; window.dispatchEvent(new Event("resize")); }
+  document.addEventListener("alertabr-pronto", function () { if (!pediu) { pediu = true; carrega(lê() !== "n"); } else if (barra.querySelector("ins[data-ad-status=filled], .ad-demo")) mostra(); });
+  document.addEventListener("alertabr-erro", function () { if (mostrou) esconde(); });
 })();
